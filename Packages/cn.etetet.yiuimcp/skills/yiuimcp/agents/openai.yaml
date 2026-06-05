@@ -1,0 +1,4 @@
+interface:
+  display_name: "YIUIMCP"
+  short_description: "CLI-first Unity automation for YIUIMCP"
+  default_prompt: "Use $yiuimcp to drive this Unity project through its CLI flows instead of step-by-step MCP calls."

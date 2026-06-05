@@ -1,0 +1,28 @@
+{
+    "name": "PicoTest.Editor",
+    "rootNamespace": "PicoTest.Editor",
+    "references": [
+        "cn.etetet.yiuimcp.Editor",
+        "UnityEditor.TestRunner",
+        "UnityEngine.TestRunner",
+        "Main",
+        "Main.Core",
+        "Unity.XR.Management",
+        "Unity.XR.Management.Editor",
+        "Unity.XR.CoreUtils",
+        "Unity.RenderPipelines.Universal.Runtime",
+        "Unity.RenderPipelines.Core.Runtime",
+        "Unity.InputSystem"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

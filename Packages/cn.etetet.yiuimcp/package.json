@@ -1,0 +1,18 @@
+{
+  "name": "cn.etetet.yiuimcp",
+  "displayName": "ET.YIUI.MCP",
+  "version": "0.0.1",
+  "unity": "2022.3",
+  "category": "Tools/CLI",
+  "description": "YIUI MCP - \u8ba9 AI \u52a9\u624b\u76f4\u63a5\u64cd\u4f5c Unity",
+  "author": {
+    "name": "YIYI"
+  },
+  "relatedPackages": {},
+  "dependencies": {
+    "com.unity.nuget.newtonsoft-json": "3.2.1"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com/@ET-Packages"
+  }
+}

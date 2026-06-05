@@ -1,5 +1,12 @@
 {
   "dependencies": {
+    "com.unity.nuget.newtonsoft-json": "3.2.1",
+    "com.unity.editorcoroutines": "1.0.0",
+    "com.unity.xr.picoxr": "file:G:/Unity/PICO-Unity-Integration-SDK",
+    "com.unity.xr.interaction.toolkit": "2.6.4",
+    "com.unity.xr.management": "4.4.0",
+    "com.unity.render-pipelines.universal": "14.0.9",
+    "com.unity.inputsystem": "1.7.0",
     "com.unity.collab-proxy": "2.12.4",
     "com.unity.feature.development": "1.0.1",
     "com.unity.textmeshpro": "3.0.6",

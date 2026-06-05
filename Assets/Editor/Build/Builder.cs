@@ -16,10 +16,49 @@ namespace PicoTest.Editor.Build
     {
         private const string OutputDir = "Builds";
 
+        /// <summary>
+        /// 本机 2022.3.16f1 未装 SDK/NDK/JDK 模块，借用同 LTS 线 2022.3.21f1 的工具链。
+        /// 可用环境变量 PICOTEST_ANDROID_TOOLCHAIN 覆盖（指向 AndroidPlayer 目录）。
+        /// </summary>
+        private static void EnsureAndroidToolchain()
+        {
+            string root = Environment.GetEnvironmentVariable("PICOTEST_ANDROID_TOOLCHAIN");
+            if (string.IsNullOrEmpty(root))
+            {
+                root = @"D:\Unity\UnityEditor\2022.3.21f1-x86_64\Editor\Data\PlaybackEngines\AndroidPlayer";
+            }
+
+            string sdk = Path.Combine(root, "SDK");
+            string ndk = Path.Combine(root, "NDK");
+            string jdk = Path.Combine(root, "OpenJDK");
+
+            // NDK 可能是嵌套目录（如 NDK\android-ndk-r23b）—— 用 source.properties 探测真根
+            if (Directory.Exists(ndk) && !File.Exists(Path.Combine(ndk, "source.properties")))
+            {
+                foreach (var sub in Directory.GetDirectories(ndk))
+                {
+                    if (File.Exists(Path.Combine(sub, "source.properties")))
+                    {
+                        ndk = sub;
+                        break;
+                    }
+                }
+            }
+
+            if (Directory.Exists(sdk)) UnityEditor.Android.AndroidExternalToolsSettings.sdkRootPath = sdk;
+            if (Directory.Exists(ndk)) UnityEditor.Android.AndroidExternalToolsSettings.ndkRootPath = ndk;
+            if (Directory.Exists(jdk)) UnityEditor.Android.AndroidExternalToolsSettings.jdkRootPath = jdk;
+
+            Debug.Log($"[Builder] Android toolchain: SDK={UnityEditor.Android.AndroidExternalToolsSettings.sdkRootPath} " +
+                      $"NDK={UnityEditor.Android.AndroidExternalToolsSettings.ndkRootPath} " +
+                      $"JDK={UnityEditor.Android.AndroidExternalToolsSettings.jdkRootPath}");
+        }
+
         public static void BuildPico()
         {
             try
             {
+                EnsureAndroidToolchain();
                 bool development = Environment.GetCommandLineArgs().Contains("-development");
 
                 var scenes = EditorBuildSettings.scenes

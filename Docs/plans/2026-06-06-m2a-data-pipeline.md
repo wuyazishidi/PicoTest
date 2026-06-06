@@ -1,5 +1,7 @@
 # M2a 数据管线 Implementation Plan
 
+> **状态：✅ 已完成**（2026-06-06，分支 m2a-data-pipeline）。12 任务全部实现并通过两段审查（规格+质量），审查中拦截 2 个 BLOCKER / 6 个 MAJOR 并全部修复。最终：EditMode 46 + PlayMode 1 + node 6 = 53 测试全绿；e2e 全链路实证通过。执行记录见 Docs/journal/2026-06-06-m2a-data-pipeline.md。
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** 建成可测的采集链路：Mock 源 → SessionRecorder → 分段落盘 → UploadQueue → Node 接收服务，e2e 脚本一键验收。

@@ -20,6 +20,17 @@ namespace PicoTest.Tests.EditMode.Transport
         public readonly HashSet<string> Completed = new HashSet<string>();
         public int FailNextNRequests;   // 注入故障
 
+        /// <summary>记录每次 PUT 的完整路径（含 ?offset=...），用于断言续传 offset 语义。</summary>
+        public readonly List<string> PutLog = new List<string>();
+
+        /// <summary>
+        /// 若为正数，对指定文件 key 的首个 PUT 强制返回 409（模拟乱序/服务端冲突），
+        /// 触发一次后自动清零，后续 PUT 正常处理。
+        /// key 为 basePath（不含 query），即 /api/v1/sessions/{sid}/files/{fileKey}。
+        /// </summary>
+        public readonly HashSet<string> ForceFirstPut409 = new HashSet<string>();
+        private readonly HashSet<string> _firstPut409Fired = new HashSet<string>();
+
         public HttpResult Send(string method, string path, byte[] body)
         {
             if (FailNextNRequests > 0) { FailNextNRequests--; return new HttpResult(503, null); }
@@ -37,9 +48,19 @@ namespace PicoTest.Tests.EditMode.Transport
             }
             if (method == "PUT" && path.Contains("/files/"))
             {
+                PutLog.Add(path);
+
                 var q = path.Split('?');
                 long offset = long.Parse(q[1].Replace("offset=", ""));
                 var key = q[0];
+
+                // 注入首个 PUT 409：模拟乱序冲突，触发一次后自动移除开关
+                if (ForceFirstPut409.Contains(key) && !_firstPut409Fired.Contains(key))
+                {
+                    _firstPut409Fired.Add(key);
+                    return new HttpResult(409, null);
+                }
+
                 if (!Files.ContainsKey(key)) Files[key] = new MemoryStream();
                 var ms2 = Files[key];
                 if (ms2.Length != offset) return new HttpResult(409, null); // 乱序保护
@@ -109,6 +130,93 @@ namespace PicoTest.Tests.EditMode.Transport
             var server = new FakeIngestServer { FailNextNRequests = 1000 };
             var q = new UploadQueue(server, partBytes: 64, maxRetries: 2, retryDelayMs: 0);
             Assert.IsFalse(q.UploadSession(dir));
+        }
+
+        /// <summary>
+        /// [P3] 验证真续传语义：若服务端已有前 64 字节，首个 PUT 的 offset 必须为 64，
+        /// 且最终字节与本地逐位一致。
+        /// </summary>
+        [Test]
+        public void Upload_Resume_SkipsAlreadyReceivedBytes()
+        {
+            var dir = MakeCompletedSession();
+            var meta = Manifest.Load(dir);
+            var sid = meta.SessionId;
+
+            // 找一个实际存在的 chunk 文件
+            var localChunk = Directory.GetFiles(Path.Combine(dir, "streams", "body_pose"), "chunk_*.ptc")[0];
+            var rel = "streams/body_pose/" + Path.GetFileName(localChunk);
+            var fileKey = Uri.EscapeDataString(rel);
+            var basePath = $"/api/v1/sessions/{sid}/files/{fileKey}";
+
+            var localData = File.ReadAllBytes(localChunk);
+            const int preSeeded = 64;
+
+            var server = new FakeIngestServer();
+            // 向服务端预置前 64 字节，模拟上次传输中断
+            var preStream = new MemoryStream();
+            preStream.Write(localData, 0, Math.Min(preSeeded, localData.Length));
+            server.Files[basePath] = preStream;
+
+            var q = new UploadQueue(server, partBytes: 64, maxRetries: 5, retryDelayMs: 0);
+            Assert.IsTrue(q.UploadSession(dir));
+
+            // 对该文件的首个 PUT 的 offset 应为 64（真续传，非从 0 重传）
+            var firstPut = server.PutLog.Find(p => p.StartsWith(basePath + "?"));
+            Assert.IsNotNull(firstPut, "应有对该文件的 PUT 请求");
+            var firstOffset = long.Parse(firstPut.Split('?')[1].Replace("offset=", ""));
+            Assert.AreEqual(preSeeded, firstOffset, "首个 PUT 的 offset 应跳过已接收字节");
+
+            // 最终字节逐位一致
+            CollectionAssert.AreEqual(localData, server.Files[basePath].ToArray());
+        }
+
+        /// <summary>
+        /// [P6] 验证乱序 PUT 恢复：首个 PUT 强制返回 409，UploadSession 仍成功（HEAD 重查 offset 后恢复）。
+        /// </summary>
+        [Test]
+        public void Upload_OutOfOrderPut_RecoversVia409()
+        {
+            var dir = MakeCompletedSession();
+            var meta = Manifest.Load(dir);
+            var sid = meta.SessionId;
+
+            var localChunk = Directory.GetFiles(Path.Combine(dir, "streams", "body_pose"), "chunk_*.ptc")[0];
+            var rel = "streams/body_pose/" + Path.GetFileName(localChunk);
+            var fileKey = Uri.EscapeDataString(rel);
+            var basePath = $"/api/v1/sessions/{sid}/files/{fileKey}";
+
+            var server = new FakeIngestServer();
+            // 注入：对该文件的首个 PUT 返回 409
+            server.ForceFirstPut409.Add(basePath);
+
+            var q = new UploadQueue(server, partBytes: 64, maxRetries: 10, retryDelayMs: 0);
+            Assert.IsTrue(q.UploadSession(dir), "409 后经 HEAD 重查应能恢复并最终成功");
+
+            // PutLog 中对该文件应有多于一次 PUT（第一次 409，后续成功）
+            var puts = server.PutLog.FindAll(p => p.StartsWith(basePath + "?"));
+            Assert.Greater(puts.Count, 1, "应有重试 PUT（第一次 409 触发重试）");
+        }
+
+        /// <summary>
+        /// [P5] 验证 Failed 会话被拒绝：UploadSession 返回 false 且服务端无新会话注册。
+        /// </summary>
+        [Test]
+        public void Upload_FailedSession_IsRejected()
+        {
+            // 手工构造一个 Status=Failed 的 manifest
+            Directory.CreateDirectory(_root);
+            var failedMeta = SessionMeta.CreateNew("test-device");
+            failedMeta.Status = SessionStatus.Failed;
+            Manifest.Save(_root, failedMeta);
+
+            var server = new FakeIngestServer();
+            var q = new UploadQueue(server, retryDelayMs: 0);
+
+            var result = q.UploadSession(_root);
+
+            Assert.IsFalse(result, "Failed 会话应被拒绝上传");
+            Assert.AreEqual(0, server.Sessions.Count, "服务端不应收到任何会话注册");
         }
     }
 }

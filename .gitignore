@@ -75,3 +75,6 @@ crashlytics-build.properties
 
 # Collected capture data (the product data lives outside git)
 /CaptureData/
+
+# IDE
+.vscode/

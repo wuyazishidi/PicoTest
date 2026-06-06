@@ -5,7 +5,8 @@ using System.Text;
 
 namespace PicoTest.Core.Transport
 {
-    /// <summary>IHttpTransport 的真实实现。HEAD 的 offset 从 Content-Length 头转为 Body（对齐 FakeIngestServer 语义）。</summary>
+    /// <summary>IHttpTransport 的真实实现。HEAD 的 offset 从 Content-Length 头转为 Body（对齐 FakeIngestServer 语义）。
+    /// 仅限后台线程使用（UploadQueue 约定）；主线程调用会被 Thread.Sleep 退避阻塞。</summary>
     public sealed class HttpClientTransport : IHttpTransport, IDisposable
     {
         private readonly HttpClient _client;

@@ -71,3 +71,37 @@ test('complete rejects bad checksum with 422', async () => {
 test('crc32 matches known vector', () => {
   assert.strictEqual(crc32(Buffer.from('123456789')), 0xCBF43926);
 });
+
+test('register with SessionId="../evil" → 400, no file outside dataDir', async () => {
+  const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ingest-'));
+  const server = await listen(createApp(dataDir));
+  const port = server.address().port;
+  const manifest = JSON.stringify({ SessionId: '../evil' });
+  const r = await req(port, 'POST', '/api/v1/sessions', manifest);
+  assert.strictEqual(r.status, 400);
+  // dataDir 上一层目录不应产生 'evil' 目录
+  assert.ok(!fs.existsSync(path.join(dataDir, '..', 'evil')));
+  server.close();
+});
+
+test('PUT fileKey containing ".." → 400', async () => {
+  const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ingest-'));
+  const server = await listen(createApp(dataDir));
+  const port = server.address().port;
+  await req(port, 'POST', '/api/v1/sessions', JSON.stringify({ SessionId: 's3' }));
+  const evilKey = encodeURIComponent('../escape.bin');
+  const r = await req(port, 'PUT', `/api/v1/sessions/s3/files/${evilKey}?offset=0`, Buffer.from([1]));
+  assert.strictEqual(r.status, 400);
+  server.close();
+});
+
+test('complete with checksums key "../x" → 400', async () => {
+  const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ingest-'));
+  const server = await listen(createApp(dataDir));
+  const port = server.address().port;
+  await req(port, 'POST', '/api/v1/sessions', JSON.stringify({ SessionId: 's4' }));
+  const bad = JSON.stringify({ checksums: { '../x': 0 } });
+  const r = await req(port, 'POST', '/api/v1/sessions/s4/complete', bad);
+  assert.strictEqual(r.status, 400);
+  server.close();
+});

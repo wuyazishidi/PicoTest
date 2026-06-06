@@ -1,0 +1,21 @@
+openapi: "3.0.3"
+info: { title: PicoTest Ingest API, version: "1.0.0" }
+paths:
+  /health:
+    get: { responses: { "200": { description: ok } } }
+  /api/v1/sessions:
+    post:
+      summary: 注册会话（body = manifest.json 原文）
+      responses: { "201": { description: created } }
+  /api/v1/sessions/{id}/files/{fileKey}:
+    head:
+      summary: 查询已接收字节数（断点续传）。offset 经 Content-Length 响应头返回
+      responses: { "200": { description: offset } }
+    put:
+      summary: 追加分块。query offset 必须等于服务端当前长度，否则 409
+      parameters: [ { name: offset, in: query, required: true, schema: { type: integer } } ]
+      responses: { "200": { description: appended }, "409": { description: offset mismatch } }
+  /api/v1/sessions/{id}/complete:
+    post:
+      summary: 客户端送 { checksums: { relPath: crc32 } }，服务端校验后落定
+      responses: { "200": { description: verified }, "422": { description: checksum mismatch } }

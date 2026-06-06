@@ -16,6 +16,10 @@
 | 包版本钉死：XRI 2.6.4 / XR Mgmt 4.4.0 / URP 14.0.9 / InputSystem 1.7.0 | 与 2022.3.16f1 兼容的保守组合；升级走实验+回归流程 |
 | 数据 Schema 版本常量 `CoreInfo.SchemaVersion` | 采集数据格式演进的兼容性锚点 |
 
+## 版本独立性说明
+
+`ChunkWriter.FormatVersion`（chunk 文件容器格式）与 `CoreInfo.SchemaVersion`（帧内容 schema）相互独立，各自递增。容器格式升级（如头部字段变更）不影响帧内容版本；帧内 schema 演进（如新增骨骼字段）不触发容器版本升级。
+
 ## 待决（需要外部输入）
 
 - 后端接口契约（OpenAPI）：后端是否已存在？不存在则 M2 交付最小接收服务

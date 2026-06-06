@@ -1,8 +1,8 @@
 // Assets/Main/Core/Recording/ChunkReader.cs
-// NOTE: BinaryReader is used for reading; it reads in platform byte order.
-// This implementation is correct only on little-endian platforms (x86/x64/ARM-LE),
-// which covers all supported PICO and PC targets. The writer uses BinaryPrimitives
-// WriteInt32LittleEndian explicitly, keeping write/read symmetric on these platforms.
+// NOTE: All multi-byte integers are read with BinaryPrimitives.ReadInt32LittleEndian,
+// which is explicit about byte order and correct on any platform.
+// This is symmetric with ChunkWriter, which uses BinaryPrimitives.WriteInt32LittleEndian.
+// No platform-dependent byte-order assumption is made in either direction.
 using System;
 using System.Buffers.Binary;
 using System.Collections.Generic;

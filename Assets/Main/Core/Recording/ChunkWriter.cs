@@ -16,6 +16,7 @@ namespace PicoTest.Core.Recording
         private readonly Guid _sessionId;
         private readonly string _streamId;
         private readonly long _maxChunkBytes;
+        private readonly byte[] _lenBuf = new byte[4];
         private FileStream _fs;
         private int _chunkIndex;
 
@@ -30,12 +31,11 @@ namespace PicoTest.Core.Recording
 
         public void AppendFrame(byte[] payload)
         {
-            if (_fs.Length + 4 + payload.Length > _maxChunkBytes && _fs.Length > HeaderLength())
+            if (_fs.Position + 4 + payload.Length > _maxChunkBytes && _fs.Position > HeaderLength())
                 RollChunk();
-            // 使用 BinaryPrimitives 写入小端 int32 长度前缀
-            var lenBuf = new byte[4];
-            BinaryPrimitives.WriteInt32LittleEndian(lenBuf, payload.Length);
-            _fs.Write(lenBuf, 0, 4);
+            // 使用 BinaryPrimitives 写入小端 int32 长度前缀（复用字段，热路径零分配）
+            BinaryPrimitives.WriteInt32LittleEndian(_lenBuf, payload.Length);
+            _fs.Write(_lenBuf, 0, 4);
             _fs.Write(payload, 0, payload.Length);
         }
 

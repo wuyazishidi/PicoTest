@@ -7,7 +7,7 @@ using System.Text;
 namespace PicoTest.Core.Recording
 {
     /// <summary>单流分段写入器。非线程安全 —— 由 SessionRecorder 的单写线程独占。</summary>
-    public sealed class ChunkWriter : IDisposable
+    public sealed class ChunkWriter : IChunkSink
     {
         public const string Magic = "PTCH";
         public const int FormatVersion = 1;
@@ -28,6 +28,9 @@ namespace PicoTest.Core.Recording
             Directory.CreateDirectory(dir);
             RollChunk();
         }
+
+        /// <summary>IChunkSink.Append 实现，委托 AppendFrame。</summary>
+        void IChunkSink.Append(byte[] frame) => AppendFrame(frame);
 
         public void AppendFrame(byte[] payload)
         {

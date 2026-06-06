@@ -1,5 +1,6 @@
 // Assets/Main/Core/Schema/Primitives.cs
 using System;
+using System.Buffers.Binary;
 
 namespace PicoTest.Core.Schema
 {
@@ -14,19 +15,20 @@ namespace PicoTest.Core.Schema
 
         public void WriteTo(byte[] buf, int offset)
         {
-            BitConverter.GetBytes(X).CopyTo(buf, offset);
-            BitConverter.GetBytes(Y).CopyTo(buf, offset + 4);
-            BitConverter.GetBytes(Z).CopyTo(buf, offset + 8);
+            BinaryPrimitives.WriteInt32LittleEndian(buf.AsSpan(offset),     BitConverter.SingleToInt32Bits(X));
+            BinaryPrimitives.WriteInt32LittleEndian(buf.AsSpan(offset + 4), BitConverter.SingleToInt32Bits(Y));
+            BinaryPrimitives.WriteInt32LittleEndian(buf.AsSpan(offset + 8), BitConverter.SingleToInt32Bits(Z));
         }
 
         public static Vec3f ReadFrom(byte[] buf, int offset) =>
-            new Vec3f(BitConverter.ToSingle(buf, offset),
-                      BitConverter.ToSingle(buf, offset + 4),
-                      BitConverter.ToSingle(buf, offset + 8));
+            new Vec3f(
+                BitConverter.Int32BitsToSingle(BinaryPrimitives.ReadInt32LittleEndian(buf.AsSpan(offset))),
+                BitConverter.Int32BitsToSingle(BinaryPrimitives.ReadInt32LittleEndian(buf.AsSpan(offset + 4))),
+                BitConverter.Int32BitsToSingle(BinaryPrimitives.ReadInt32LittleEndian(buf.AsSpan(offset + 8))));
 
         public bool Equals(Vec3f o) => X == o.X && Y == o.Y && Z == o.Z;
         public override bool Equals(object o) => o is Vec3f v && Equals(v);
-        public override int GetHashCode() => X.GetHashCode() ^ Y.GetHashCode() ^ Z.GetHashCode();
+        public override int GetHashCode() => System.HashCode.Combine(X, Y, Z);
     }
 
     public readonly struct Quatf : IEquatable<Quatf>
@@ -37,20 +39,21 @@ namespace PicoTest.Core.Schema
 
         public void WriteTo(byte[] buf, int offset)
         {
-            BitConverter.GetBytes(X).CopyTo(buf, offset);
-            BitConverter.GetBytes(Y).CopyTo(buf, offset + 4);
-            BitConverter.GetBytes(Z).CopyTo(buf, offset + 8);
-            BitConverter.GetBytes(W).CopyTo(buf, offset + 12);
+            BinaryPrimitives.WriteInt32LittleEndian(buf.AsSpan(offset),      BitConverter.SingleToInt32Bits(X));
+            BinaryPrimitives.WriteInt32LittleEndian(buf.AsSpan(offset + 4),  BitConverter.SingleToInt32Bits(Y));
+            BinaryPrimitives.WriteInt32LittleEndian(buf.AsSpan(offset + 8),  BitConverter.SingleToInt32Bits(Z));
+            BinaryPrimitives.WriteInt32LittleEndian(buf.AsSpan(offset + 12), BitConverter.SingleToInt32Bits(W));
         }
 
         public static Quatf ReadFrom(byte[] buf, int offset) =>
-            new Quatf(BitConverter.ToSingle(buf, offset),
-                      BitConverter.ToSingle(buf, offset + 4),
-                      BitConverter.ToSingle(buf, offset + 8),
-                      BitConverter.ToSingle(buf, offset + 12));
+            new Quatf(
+                BitConverter.Int32BitsToSingle(BinaryPrimitives.ReadInt32LittleEndian(buf.AsSpan(offset))),
+                BitConverter.Int32BitsToSingle(BinaryPrimitives.ReadInt32LittleEndian(buf.AsSpan(offset + 4))),
+                BitConverter.Int32BitsToSingle(BinaryPrimitives.ReadInt32LittleEndian(buf.AsSpan(offset + 8))),
+                BitConverter.Int32BitsToSingle(BinaryPrimitives.ReadInt32LittleEndian(buf.AsSpan(offset + 12))));
 
         public bool Equals(Quatf o) => X == o.X && Y == o.Y && Z == o.Z && W == o.W;
         public override bool Equals(object o) => o is Quatf q && Equals(q);
-        public override int GetHashCode() => X.GetHashCode() ^ Y.GetHashCode() ^ Z.GetHashCode() ^ W.GetHashCode();
+        public override int GetHashCode() => System.HashCode.Combine(X, Y, Z, W);
     }
 }

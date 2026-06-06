@@ -1,5 +1,7 @@
 // Assets/Main/Core/Schema/Frames.cs
 using System;
+using System.Buffers.Binary;
+using System.IO;
 
 namespace PicoTest.Core.Schema
 {
@@ -27,7 +29,7 @@ namespace PicoTest.Core.Schema
         public byte[] ToBytes()
         {
             var buf = new byte[ByteSize];
-            BitConverter.GetBytes(TimestampNs).CopyTo(buf, 0);
+            BinaryPrimitives.WriteInt64LittleEndian(buf.AsSpan(0), TimestampNs);
             int o = 8;
             for (int i = 0; i < JointCount; i++)
             {
@@ -39,7 +41,9 @@ namespace PicoTest.Core.Schema
 
         public static BodyPoseFrame FromBytes(byte[] buf)
         {
-            var f = new BodyPoseFrame(BitConverter.ToInt64(buf, 0));
+            if (buf.Length < ByteSize)
+                throw new InvalidDataException($"BodyPoseFrame needs {ByteSize} bytes, got {buf.Length}");
+            var f = new BodyPoseFrame(BinaryPrimitives.ReadInt64LittleEndian(buf.AsSpan(0)));
             int o = 8;
             for (int i = 0; i < JointCount; i++)
             {
@@ -72,24 +76,28 @@ namespace PicoTest.Core.Schema
         public byte[] ToBytes()
         {
             var buf = new byte[8 + 8 + 4 + 4 + 4 + 4 + Payload.Length];
-            BitConverter.GetBytes(TimestampNs).CopyTo(buf, 0);
-            BitConverter.GetBytes(FrameIndex).CopyTo(buf, 8);
-            BitConverter.GetBytes(Width).CopyTo(buf, 16);
-            BitConverter.GetBytes(Height).CopyTo(buf, 20);
-            BitConverter.GetBytes(Crc32).CopyTo(buf, 24);
-            BitConverter.GetBytes(Payload.Length).CopyTo(buf, 28);
+            BinaryPrimitives.WriteInt64LittleEndian(buf.AsSpan(0),  TimestampNs);
+            BinaryPrimitives.WriteInt64LittleEndian(buf.AsSpan(8),  FrameIndex);
+            BinaryPrimitives.WriteInt32LittleEndian(buf.AsSpan(16), Width);
+            BinaryPrimitives.WriteInt32LittleEndian(buf.AsSpan(20), Height);
+            BinaryPrimitives.WriteUInt32LittleEndian(buf.AsSpan(24), Crc32);
+            BinaryPrimitives.WriteInt32LittleEndian(buf.AsSpan(28), Payload.Length);
             Payload.CopyTo(buf, 32);
             return buf;
         }
 
         public static VideoFrameMeta FromBytes(byte[] buf)
         {
-            long ts = BitConverter.ToInt64(buf, 0);
-            long idx = BitConverter.ToInt64(buf, 8);
-            int w = BitConverter.ToInt32(buf, 16);
-            int h = BitConverter.ToInt32(buf, 20);
-            uint crc = BitConverter.ToUInt32(buf, 24);
-            int len = BitConverter.ToInt32(buf, 28);
+            if (buf.Length < 32)
+                throw new InvalidDataException($"VideoFrameMeta needs at least 32 bytes for header, got {buf.Length}");
+            long ts  = BinaryPrimitives.ReadInt64LittleEndian(buf.AsSpan(0));
+            long idx = BinaryPrimitives.ReadInt64LittleEndian(buf.AsSpan(8));
+            int  w   = BinaryPrimitives.ReadInt32LittleEndian(buf.AsSpan(16));
+            int  h   = BinaryPrimitives.ReadInt32LittleEndian(buf.AsSpan(20));
+            uint crc = BinaryPrimitives.ReadUInt32LittleEndian(buf.AsSpan(24));
+            int  len = BinaryPrimitives.ReadInt32LittleEndian(buf.AsSpan(28));
+            if (len < 0 || 32 + (long)len > buf.Length)
+                throw new InvalidDataException($"VideoFrameMeta payload length {len} is invalid for buffer size {buf.Length}");
             var payload = new byte[len];
             Array.Copy(buf, 32, payload, 0, len);
             return new VideoFrameMeta(ts, idx, w, h, payload, crc);

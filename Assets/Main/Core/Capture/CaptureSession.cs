@@ -81,10 +81,18 @@ namespace PicoTest.Core.Capture
         {
             if (!_recording) return;
             foreach (var s in _sources) s.Stop();
+            // 退订当前 recorder 的 handler，防止已停止的源在析构期间意外投递帧
+            foreach (var s in _sources)
+                if (_handlers.TryGetValue(s, out var h)) { s.FrameProduced -= h; _handlers.Remove(s); }
             _recorder.Stop();
             _recording = false;
         }
 
+        /// <summary>
+        /// 返回当前会话快照。
+        /// 录制中：Streams 用活读计数器（GetFrameCount/GetDroppedFrames）实时反映队列消费进度。
+        /// 停止后：快照保留最后一次会话的终化统计（Stop 已写回 _recorder.Meta.Streams），直到下次 Start。
+        /// </summary>
         public SessionSnapshot GetSnapshot()
         {
             var snap = new SessionSnapshot
@@ -93,14 +101,27 @@ namespace PicoTest.Core.Capture
                 SessionId = _recorder?.Meta.SessionId,
                 FaultMessage = _recorder?.FirstFault?.Message,
             };
-            if (_recorder != null && _recording)
-                snap.Streams = _recorder.Meta.Streams
-                    .Select(i => new StreamSnapshot
-                    {
-                        Id = i.Id,
-                        FrameCount = _recorder.GetFrameCount(i.Id),
-                        DroppedFrames = _recorder.GetDroppedFrames(i.Id),
-                    }).ToList();
+            if (_recorder != null)
+            {
+                if (_recording)
+                    // 录制中：活读队列消费计数，实时性最高
+                    snap.Streams = _recorder.Meta.Streams
+                        .Select(i => new StreamSnapshot
+                        {
+                            Id = i.Id,
+                            FrameCount = _recorder.GetFrameCount(i.Id),
+                            DroppedFrames = _recorder.GetDroppedFrames(i.Id),
+                        }).ToList();
+                else
+                    // 停止后：Stop() 已将终化值写回 Meta.Streams，直接读取
+                    snap.Streams = _recorder.Meta.Streams
+                        .Select(i => new StreamSnapshot
+                        {
+                            Id = i.Id,
+                            FrameCount = i.FrameCount,
+                            DroppedFrames = i.DroppedFrames,
+                        }).ToList();
+            }
             return snap;
         }
 

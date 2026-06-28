@@ -9,7 +9,8 @@ namespace PicoTest.Rendering
     public sealed class FisheyeCalibration : ScriptableObject
     {
         [Header("内参 (像素)")] public float fx, fy, cx, cy;
-        [Header("等距畸变 k1..k4")] public float k1, k2, k3, k4;
+        [Header("等距畸变 k1..k6 (equiDis62 径向, 切向 p1/p2 已简化丢弃)")]
+        public float k1, k2, k3, k4, k5, k6;
         [Header("图像尺寸")] public int width = 1600, height = 1600;
         [Header("外参：相机→机器人头 旋转")] public Quaternion extrinsicRotation = Quaternion.identity;
 
@@ -24,7 +25,7 @@ namespace PicoTest.Rendering
                 m.m10, m.m11, m.m12,
                 m.m20, m.m21, m.m22,
             };
-            return new FisheyeProjection(fx, fy, cx, cy, k1, k2, k3, k4, width, height, thetaMaxRad, r);
+            return new FisheyeProjection(fx, fy, cx, cy, k1, k2, k3, k4, k5, k6, width, height, thetaMaxRad, r);
         }
 
         /// <summary>shader 需要的 3x3（Matrix4x4，平移/缩放为单位）。</summary>

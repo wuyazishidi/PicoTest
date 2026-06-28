@@ -59,6 +59,7 @@ namespace PicoTest.Rendering
         {
             mpb.SetVector(prefix + "Intrin", new Vector4(c.fx, c.fy, c.cx, c.cy));
             mpb.SetVector(prefix + "Dist", new Vector4(c.k1, c.k2, c.k3, c.k4));
+            mpb.SetVector(prefix + "Dist2", new Vector4(c.k5, c.k6, 0, 0));
             mpb.SetMatrix(prefix + "Rot", c.ExtrinsicMatrix());
             if (tex != null) mpb.SetTexture(texProp, tex);
         }

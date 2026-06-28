@@ -63,7 +63,9 @@ namespace PicoTest.Tests.PlayMode.Rendering
             var r = ro.AddComponent<PicoTest.Rendering.FisheyeDomeRenderer>();
             r.leftCalibration = LoadReal("RealLeft");
             r.rightCalibration = LoadReal("RealRight");
-            r.leftTex = sbs; r.rightTex = sbs;        // SBS：UV 分半留待正式 feeder
+            r.leftTex = sbs; r.rightTex = sbs;        // 同一张 SBS，靠 UV 子区分半
+            r.leftUVRect = new Vector4(0f, 0f, 0.5f, 1f);   // 左眼采左半
+            r.rightUVRect = new Vector4(0.5f, 0f, 0.5f, 1f); // 右眼采右半
             r.coverageDeg = 150; r.radius = 10; r.segments = 48;
             r.Initialize(); r.PushParameters();
             yield return null;

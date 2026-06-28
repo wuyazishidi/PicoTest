@@ -29,6 +29,7 @@ Shader "PicoTest/FisheyeDome"
             float4 _LeftDist2, _RightDist2;     // k5,k6,_,_
             float4x4 _LeftRot, _RightRot;       // 3x3 置于左上
             float4 _ImgSize;                    // xy = (w,h)
+            float4 _LeftUVRect, _RightUVRect;   // 眼图 [0,1] → 图集子区: uv*zw + xy（SBS 分半）
             float _ThetaMax, _FlipV, _Mirror;
             TEXTURE2D(_LeftTex);  SAMPLER(sampler_LeftTex);
             TEXTURE2D(_RightTex); SAMPLER(sampler_RightTex);
@@ -82,6 +83,9 @@ Shader "PicoTest/FisheyeDome"
                     ? ProjectUV(i.dirOS, _RightIntrin, _RightDist, _RightDist2, _RightRot, inFov)
                     : ProjectUV(i.dirOS, _LeftIntrin,  _LeftDist,  _LeftDist2,  _LeftRot,  inFov);
                 if (!inFov) return half4(0, 0, 0, 1);            // FOV 裁剪
+                // 眼图 [0,1] → 图集子区（SBS：左半/右半）
+                float4 rect = isRight ? _RightUVRect : _LeftUVRect;
+                uv = uv * rect.zw + rect.xy;
                 return isRight
                     ? SAMPLE_TEXTURE2D(_RightTex, sampler_RightTex, uv)
                     : SAMPLE_TEXTURE2D(_LeftTex,  sampler_LeftTex,  uv);

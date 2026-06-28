@@ -14,6 +14,9 @@ namespace PicoTest.Rendering
 
         [Header("标定（左右各一）")] public FisheyeCalibration leftCalibration, rightCalibration;
         [Header("纹理")] public Texture leftTex, rightTex;
+        [Header("UV 子区 (x,y,scaleX,scaleY)；SBS 整图时左=(0,0,.5,1) 右=(.5,0,.5,1)")]
+        public Vector4 leftUVRect = new Vector4(0, 0, 1, 1);
+        public Vector4 rightUVRect = new Vector4(0, 0, 1, 1);
         [Header("WorldLocked 锚点")] public Transform robotHeadAnchor;
         [Header("穹顶")] public float coverageDeg = 220f; public int segments = 48; public float radius = 20f;
         [Range(0, 1)] public float flipV = 0, mirror = 0;
@@ -48,6 +51,8 @@ namespace PicoTest.Rendering
             SetEye(_mpb, "_Left", leftCalibration, leftTex, "_LeftTex");
             SetEye(_mpb, "_Right", rightCalibration, rightTex, "_RightTex");
             _mpb.SetVector("_ImgSize", new Vector4(leftCalibration.width, leftCalibration.height, 0, 0));
+            _mpb.SetVector("_LeftUVRect", leftUVRect);
+            _mpb.SetVector("_RightUVRect", rightUVRect);
             _mpb.SetFloat("_ThetaMax", thetaMax);
             _mpb.SetFloat("_FlipV", flipV);
             _mpb.SetFloat("_Mirror", mirror);

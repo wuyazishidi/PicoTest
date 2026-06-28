@@ -58,3 +58,16 @@
 **决策（用户）**：装 HEVC Video Extensions 后重跑（而非转码/上真机/合成图）。待装好后重跑 `run-tests -Mode PlayMode` → 取 `Artifacts/dome_real.png` 给人审。
 
 **遗留**：HEVC 扩展装好前看不到真实视频上穹顶；真机立体/沉浸仍需 APK 部署验。
+
+---
+
+## 追加2（同日）：ffmpeg 抽帧 → 真实帧去畸变成功 ✅
+
+- 用户授权装 ffmpeg：`winget install -e --id Gyan.FFmpeg`（8.1.2）。装到 `%LOCALAPPDATA%\Microsoft\WinGet\Links\ffmpeg.exe`（PATH 需重启 shell；脚本里直接走 Links 路径）。**ffmpeg 自带 HEVC 解码器，绕过 Unity 编辑器无法解 h265 的限制**。装 HEVC Video Extensions 重启后 Unity VideoPlayer 仍 "Cannot read file"（确认是 Unity 编辑器顽固限制，非系统编解码器）。
+- `Tools/extract-fisheye-frame.ps1` 从 camera.mp4 抽一帧 `sbs_frame.png`（2560×960）。
+- `RealFisheyeFrameOnDomeTests`：真实帧 + RealLeft/Right(k1-k6) 渲染穹顶 → `Artifacts/dome_real.png`。
+- **肉眼审通过**：鱼眼桶形畸变被正确去除为自然透视——双手在两侧、脚在中央、垃圾桶边缘是直的、地面平整、手不变形。`flipV=0` 朝向自然（flipV=1 会上下颠倒）。SBS 左眼取左半正确。**"角度 1:1 还原"端到端坐实**。
+- **宪法 #12**：camera.mp4 / metadata.json / sbs_frame.png（含可识别人物）全部 gitignore 不入库；依赖它们的测试缺数据即 Ignore。标定数值已抽进 RealLeft/Right.asset（纯数字，已入库）。
+- 测试：EditMode 62 / PlayMode 6（+1 真实帧渲染）+1 skip（视频探针，HEVC 运行时仍不可解）。
+
+**结论**：核心目标"鱼眼→穹顶 1:1 还原"用真实数据验证成功（PC 端单眼）。真 3D 立体/沉浸仍待 APK 上 PICO（基线 0.064m≈IPD 已确认能支持）。

@@ -78,3 +78,6 @@ crashlytics-build.properties
 
 # IDE
 .vscode/
+
+# Rendered test artifacts (PNG dumps from render probes)
+Artifacts/

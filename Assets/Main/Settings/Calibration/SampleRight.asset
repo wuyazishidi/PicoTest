@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c7c21a71c51517f45867dea0417af2c1, type: 3}
+  m_Name: SampleRight
+  m_EditorClassIdentifier: 
+  fx: 416.6966
+  fy: 416.6966
+  cx: 800
+  cy: 800
+  k1: 0
+  k2: 0
+  k3: 0
+  k4: 0
+  width: 1600
+  height: 1600
+  extrinsicRotation: {x: 0, y: 0, z: 0, w: 1}

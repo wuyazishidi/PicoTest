@@ -81,3 +81,11 @@ crashlytics-build.properties
 
 # Rendered test artifacts (PNG dumps from render probes)
 Artifacts/
+
+# 采集的真人数据不入库（宪法 #12）：StreamingAssets 测试用视频/帧及其 meta
+Assets/StreamingAssets/camera.mp4
+Assets/StreamingAssets/camera.mp4.meta
+Assets/StreamingAssets/metadata.json
+Assets/StreamingAssets/metadata.json.meta
+Assets/StreamingAssets/sbs_frame.png
+Assets/StreamingAssets/sbs_frame.png.meta

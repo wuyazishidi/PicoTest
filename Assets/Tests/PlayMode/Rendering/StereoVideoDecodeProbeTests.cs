@@ -21,7 +21,8 @@ namespace PicoTest.Tests.PlayMode.Rendering
         public IEnumerator RealStereoVideo_OnDome_DumpsPng_OrIgnoresIfNoCodec()
         {
             var filePath = Path.Combine(Application.streamingAssetsPath, "camera.mp4");
-            Assert.IsTrue(File.Exists(filePath), $"视频不存在: {filePath}");
+            if (!File.Exists(filePath))
+                Assert.Ignore($"视频不存在（真人采集数据不入库）: {filePath}");
             var url = new System.Uri(filePath).AbsoluteUri; // file:// URI（规避反斜杠）
             LogAssert.ignoreFailingMessages = true;          // VideoPlayer 解码失败会打 Error 日志
 
@@ -38,20 +39,28 @@ namespace PicoTest.Tests.PlayMode.Rendering
             vp.errorReceived += (v, m) => { err = true; errMsg = m; };
 
             vp.Prepare();
-            int frames = 0;
-            while (!vp.isPrepared && !err && frames < 600) { frames++; yield return null; }
+            // 用真实墙钟等待（测试运行器会快进帧，必须给解码器真实时间初始化）
+            float wall = 0;
+            while (!vp.isPrepared && !err && wall < 20f)
+            {
+                yield return new WaitForSecondsRealtime(0.1f); wall += 0.1f;
+            }
             if (err || !vp.isPrepared)
             {
                 Object.Destroy(go); sbs.Release();
-                Assert.Ignore($"HEVC 运行时解码不可用（{errMsg ?? "prepare 未完成"}）。" +
-                              "裸 Windows 编辑器缺 HEVC 解码器；真机/装 HEVC 扩展后本测试自动转为 PNG 输出。");
+                Assert.Ignore($"运行时视频解码不可用（{errMsg ?? "prepare 未完成"}）。" +
+                              "已知：Windows 编辑器 VideoPlayer 即便装 HEVC 扩展也常拒绝 h265；" +
+                              "改喂 H.264 或上真机后本测试自动转 PNG 输出。");
                 yield break;
             }
 
             vp.Play();
-            int playWait = 0;
-            while (vp.frame < 2 && !err && playWait < 300) { playWait++; yield return null; }
-            yield return null;
+            float pw = 0;
+            while (vp.frame < 2 && !err && pw < 10f)
+            {
+                yield return new WaitForSecondsRealtime(0.1f); pw += 0.1f;
+            }
+            yield return new WaitForSecondsRealtime(0.2f);
 
             // 渲染穹顶（喂 SBS 单图，左/右各取一半，本探针只验单眼路径）
             var rig = new GameObject("rig");

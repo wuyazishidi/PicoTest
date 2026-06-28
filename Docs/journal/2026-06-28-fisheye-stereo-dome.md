@@ -41,3 +41,20 @@
 - 装一个 demo 场景（Bootstrap 装配 FisheyeDomeRenderer + 样例标定 + 一张真实鱼眼样图）→ 截图给人审。
 - 用户给基线/标定 → 填占位资产 → 跑离线 OpenCV 对拍坐实 <1px。
 - 合并分支（走 finishing-a-development-branch）。
+
+---
+
+## 追加（同日）：接入真实 PICO 采集数据
+
+用户提供 `Assets/StreamingAssets/camera.mp4`（PICO 4U 实采）+ `metadata.json`。关键发现与处理：
+
+- **畸变模型不是 k1-k4**：`factory_calibration` model=`equiDis62` = 6 径向(k1-k6)+2 切向(p1,p2)。**实测 k1-k4 截断灾难性发散**（θ=1.37 时高阶项互相抵消，截断得 θ_d≈15 vs 真值≈1.22）。故把 `FisheyeProjection`/shader/标定全扩到 **k1-k6（Horner）**，切向 p1/p2 按设计简化丢弃（边缘残差~1-2px）。
+- **基线=0.064m≈IPD**：之前悬而未决的硬件问题被数据回答——**3D 深度能真 1:1**。
+- **导入器** `FactoryCalibrationImporter`：从 metadata.json 落 `RealLeft/RealRight.asset`（fx582.9, 1280×960, raw 鱼眼 K+D）。
+- **SBS 分半**：视频是 stereo side-by-side 单流，shader/renderer 加 `_LeftUVRect/_RightUVRect`，单张 SBS 纹理左半→左眼、右半→右眼（默认全帧向后兼容）。
+- **❌ HEVC 编辑器解码受阻（实证）**：Windows 编辑器 VideoPlayer 无法解码 h265 → `"Cannot read file", width=0`。这是系统缺 HEVC Video Extensions，**非代码问题**；PICO 真机 h265 原生可解。探针 `StereoVideoDecodeProbeTests` 写成「能解码→渲染+存 `Artifacts/dome_real.png`，不能→优雅 Ignore」，**装上 HEVC 扩展后自动转为 PNG 输出，无需改码**。
+- 测试：EditMode 62 / PlayMode 5（+1 SBS 分半断言）+1 skip（视频探针）。
+
+**决策（用户）**：装 HEVC Video Extensions 后重跑（而非转码/上真机/合成图）。待装好后重跑 `run-tests -Mode PlayMode` → 取 `Artifacts/dome_real.png` 给人审。
+
+**遗留**：HEVC 扩展装好前看不到真实视频上穹顶；真机立体/沉浸仍需 APK 部署验。

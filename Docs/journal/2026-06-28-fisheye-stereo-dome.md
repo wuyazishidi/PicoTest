@@ -71,3 +71,14 @@
 - 测试：EditMode 62 / PlayMode 6（+1 真实帧渲染）+1 skip（视频探针，HEVC 运行时仍不可解）。
 
 **结论**：核心目标"鱼眼→穹顶 1:1 还原"用真实数据验证成功（PC 端单眼）。真 3D 立体/沉浸仍待 APK 上 PICO（基线 0.064m≈IPD 已确认能支持）。
+
+---
+
+## 追加3（同日）：移除 CurvedUI + 搭 XR 版 demo
+
+- **移除 CurvedUI**：全项目零引用（代码/场景/预制体均无，asmdef 隔离使 Main 不可能引用），曲面早由自写 `InvertedSphereMesh` 提供。直接删 `Assets/Plugins/CurvedUI`（本就未入 git）。编译+测试仍绿，无任何破坏。
+- **XR 版 demo**：`FisheyeDomeXRRig` + `FisheyeXRDemoSceneBuilder`（菜单 PicoTest/Build Fisheye XR Demo Scene）。用 XRI Device-based XR Origin（头显追踪相机），穹顶跟头位置/世界锁朝向。shader 的单通道立体实例化 → 真机左右眼各采 SBS 半幅 = 真立体。帧用 UnityWebRequest 跨平台加载。
+  - **踩坑**：穹顶 `ZWrite Off` 是背景，XRI 相机默认 clearFlags=Skybox → 天空盒盖住穹顶。修：运行时把 XR 相机 clearFlags 设 SolidColor 黑（遥操作背景本就该黑）。
+  - **踩坑**：EnterPlayMode 后忘记 StopPlayMode → 编辑器卡 Compiling（PlayMode 阻塞域重载）。教训：自动化进 PlayMode 后必须确保 StopPlayMode。
+  - 编辑器实测单眼预览渲染正确（game view 截图）；真立体只能上真机验。
+- **下一步真机**：构建 APK → adb 部署 PICO。注意 YIUIMCP 要编辑器开着、batchmode 构建要编辑器关着（互斥）。真机上把静态帧换成机器人双目流实时纹理。

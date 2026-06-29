@@ -54,6 +54,39 @@ namespace PicoTest.Editor.Build
                       $"JDK={UnityEditor.Android.AndroidExternalToolsSettings.jdkRootPath}");
         }
 
+        /// <summary>
+        /// 专用：只构建 VST 实时鱼眼穹顶测试场景到 Builds/PicoTest-VstLive.apk（dev 构建，便于 adb logcat
+        /// 看 [VST] 诊断）。不依赖 EditorBuildSettings。需编辑器关闭（batchmode 与 YIUIMCP 互斥）+ PICO 4U 设备。
+        /// 用法：Unity.exe -batchmode -quit -projectPath ... -buildTarget Android -executeMethod PicoTest.Editor.Build.Builder.BuildVstLiveTest -logFile build.log
+        /// </summary>
+        public static void BuildVstLiveTest()
+        {
+            try
+            {
+                EnsureAndroidToolchain();
+                Directory.CreateDirectory(OutputDir);
+                string apkPath = Path.Combine(OutputDir, "PicoTest-VstLive.apk");
+
+                var options = new BuildPlayerOptions
+                {
+                    scenes = new[] { "Assets/Main/Scenes/FisheyeDomeXRLive.unity" },
+                    locationPathName = apkPath,
+                    target = BuildTarget.Android,
+                    options = BuildOptions.Development | BuildOptions.AllowDebugging,
+                };
+
+                BuildReport report = BuildPipeline.BuildPlayer(options);
+                BuildSummary summary = report.summary;
+                Debug.Log($"[Builder] VstLive result={summary.result} size={summary.totalSize} time={summary.totalTime} errors={summary.totalErrors} output={apkPath}");
+                EditorApplication.Exit(summary.result == BuildResult.Succeeded ? 0 : 1);
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"[Builder] VstLive Exception: {e}");
+                EditorApplication.Exit(1);
+            }
+        }
+
         public static void BuildPico()
         {
             try

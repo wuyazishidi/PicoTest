@@ -82,3 +82,17 @@
   - **踩坑**：EnterPlayMode 后忘记 StopPlayMode → 编辑器卡 Compiling（PlayMode 阻塞域重载）。教训：自动化进 PlayMode 后必须确保 StopPlayMode。
   - 编辑器实测单眼预览渲染正确（game view 截图）；真立体只能上真机验。
 - **下一步真机**：构建 APK → adb 部署 PICO。注意 YIUIMCP 要编辑器开着、batchmode 构建要编辑器关着（互斥）。真机上把静态帧换成机器人双目流实时纹理。
+
+---
+
+## 追加4（2026-06-29）：接入 PICO VST 实时相机（真机测试）
+
+把静态帧换成 **PICO 自己的 VST 透视相机实时流**——用头显自带的双目鱼眼当"机器人的眼睛"测整条管线。
+
+- **移植 YC-Ego 的 VstCamera**（`Assets/Main/Vst/`，独立 `Main.Vst` 程序集，引用 `PICO.TobSupport`）：PICO 4U Enterprise raw 鱼眼采集，`KEY_OUTPUT_CAMERA_RAW_DATA=TRUE`，Interlace SBS 2560×960 RGBA32。完整保留崩溃规避（原生线程禁 JNI、延迟泵 PumpFromMain、StartGetImageData 重试、暂停/恢复）。
+- **`VstCameraDomeFeeder`**：帧回调（原生线程）双缓冲 Marshal.Copy → Update（UnityMain）LoadRawTextureData 上传 Texture2D → 喂穹顶。`flipV=1`（相机缓冲 top-down）。
+- **新场景 `FisheyeDomeXRLive`**：XR Origin + feeder，左右眼各采 SBS 半幅。去畸变用出厂标定 RealLeft/RealRight（A9410，k1-k6）。
+- **AndroidManifest**：加 `CAMERA` + `com.picovr.permission.CAMERA_VST`（VST 必需）。
+- **`Builder.BuildVstLiveTest`**：专用构建入口 → `Builds/PicoTest-VstLive.apk`（dev 构建便于 logcat）。
+- **关键约束**：① 运行时 SDK 不暴露畸变 → 去畸变必须用离线出厂标定（按设备；测试设备非 A9410 则畸变近似）。② 仅真机有效（Enterprise 相机需激活），编辑器测不了。③ 真机要查左右眼没接反（接反则深度里外翻转）。
+- **状态**：代码完整、编译绿、构建就绪。待 PICO 设备连接 → 构建+部署+真机验。包名 com.wuyazishidi.picotest。

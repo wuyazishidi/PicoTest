@@ -147,22 +147,44 @@ namespace PicoTest.Vst
                 _anchor.position = _xrCam.transform.position;
         }
 
-        /// <summary>反射开启系统透视（避免对 Unity.XR.PXR 程序集的编译期依赖；兼容 PXR/OpenXR 后端）。</summary>
+        /// <summary>
+        /// 反射开启系统透视。本机为 OpenXR 后端 → PassthroughFeature 才有效；PXR_Manager 仅传统 PXR 后端有效。
+        /// 两套都试一遍（哪个后端就哪个生效），避免对 XR 程序集的编译期依赖。
+        /// </summary>
         private static void EnableVideoSeeThrough()
         {
-            try
+            string[] typeNames =
             {
-                Type t = null;
-                foreach (var asm in AppDomain.CurrentDomain.GetAssemblies())
+                "Unity.XR.OpenXR.Features.PICOSupport.PassthroughFeature", // OpenXR 后端（本机）
+                "Unity.XR.PXR.PXR_Manager",                                // 传统 PXR 后端
+            };
+            bool any = false;
+            foreach (var tn in typeNames)
+            {
+                try
                 {
-                    t = asm.GetType("Unity.XR.PXR.PXR_Manager");
-                    if (t != null) break;
+                    var t = FindType(tn);
+                    if (t == null) continue;
+                    var prop = t.GetProperty("EnableVideoSeeThrough", BindingFlags.Public | BindingFlags.Static);
+                    if (prop != null && prop.CanWrite) { prop.SetValue(null, true); any = true; Debug.Log($"[VstFeeder] 透视已开启 via {tn} (property)"); continue; }
+                    var field = t.GetField("EnableVideoSeeThrough", BindingFlags.Public | BindingFlags.Static);
+                    if (field != null) { field.SetValue(null, true); any = true; Debug.Log($"[VstFeeder] 透视已开启 via {tn} (field)"); }
                 }
-                var p = t?.GetProperty("EnableVideoSeeThrough", BindingFlags.Public | BindingFlags.Static);
-                if (p != null && p.CanWrite) { p.SetValue(null, true); Debug.Log("[VstFeeder] 透视模式已开启"); }
-                else Debug.LogWarning("[VstFeeder] 未找到 PXR_Manager.EnableVideoSeeThrough，透视未开启");
+                catch (Exception e) { Debug.LogWarning($"[VstFeeder] 设 {tn} 透视失败: {e.Message}"); }
             }
-            catch (Exception e) { Debug.LogWarning($"[VstFeeder] 开启透视失败: {e.Message}"); }
+            if (!any) Debug.LogWarning("[VstFeeder] 未找到透视 API（PassthroughFeature / PXR_Manager），透视未开启");
+        }
+
+        private static Type FindType(string fullName)
+        {
+            var t = Type.GetType(fullName);
+            if (t != null) return t;
+            foreach (var asm in AppDomain.CurrentDomain.GetAssemblies())
+            {
+                t = asm.GetType(fullName);
+                if (t != null) return t;
+            }
+            return null;
         }
 
         private void StartQuit()
@@ -173,15 +195,26 @@ namespace PicoTest.Vst
             StartCoroutine(QuitAfterCameraClose());
         }
 
+        // 退出路径参考 YC-Ego（ControllerInput.cs）：关相机+解绑 → 等待 → killProcess。
+        // 不用 Application.Quit()：它会让 OpenXR Shutdown SIGSEGV 并残留 pxrcaptureservice Binder
+        // → 下次启动崩溃。killProcess(myPid) 是 YC-Ego 验证过的安全退出路径。
         private IEnumerator QuitAfterCameraClose()
         {
             VstCamera.OnFrame -= OnFrame;
-            VstCamera.CloseCamera();                                     // 按官方示例关相机（CloseCamerafor4U）
-            yield return new WaitForSeconds(quitCameraCloseDelaySec);    // 等原生相机服务干净退出，避免崩溃
-            Debug.Log("[VstFeeder] 退出程序");
-            Application.Quit();
-#if UNITY_EDITOR
+            VstCamera.Shutdown();                                        // 关相机 + 解绑 Enterprise（CloseCamerafor4U + UnBind）
+            yield return new WaitForSeconds(quitCameraCloseDelaySec);    // 等 close+unbind 往返完成，避免残留 Binder
+            Debug.Log("[VstFeeder] 退出程序（killProcess）");
+#if UNITY_ANDROID && !UNITY_EDITOR
+            try
+            {
+                using var proc = new AndroidJavaClass("android.os.Process");
+                proc.CallStatic("killProcess", proc.CallStatic<int>("myPid"));
+            }
+            catch (Exception e) { Debug.LogWarning($"[VstFeeder] killProcess 失败: {e.Message}"); }
+#elif UNITY_EDITOR
             UnityEditor.EditorApplication.isPlaying = false;
+#else
+            Application.Quit();
 #endif
         }
 

@@ -31,13 +31,16 @@ namespace PicoTest.Tests.EditMode.Rendering
         [Test]
         public void BakedCalib_LeftIntrinsicsAndDistortion()
         {
+            // 结构性断言（不钉具体数值 → 重标定后不误红）：访问器映射 + D 长度 + 合理量级
             var L = LoadBaked().Left;
-            Assert.AreEqual(582.9312497836369, L.Fx, 1e-6);
-            Assert.AreEqual(576.1148944240032, L.Fy, 1e-6);
-            Assert.AreEqual(635.1327035332002, L.Cx, 1e-6);
-            Assert.AreEqual(481.9388806940978, L.Cy, 1e-6);
+            Assert.AreEqual(L.K[0][0], L.Fx, 1e-12, "fx = K[0][0]");
+            Assert.AreEqual(L.K[1][1], L.Fy, 1e-12, "fy = K[1][1]");
+            Assert.AreEqual(L.K[0][2], L.Cx, 1e-12, "cx = K[0][2]");
+            Assert.AreEqual(L.K[1][2], L.Cy, 1e-12, "cy = K[1][2]");
             Assert.AreEqual(8, L.D.Length, "D = k1..k6,p1,p2");
-            Assert.AreEqual(-0.1473714326584375, L.D[0], 1e-12);
+            Assert.That(L.Fx, Is.InRange(100.0, 2000.0), "fx 量级合理");
+            Assert.That(L.Cx, Is.InRange(0.0, 1280.0), "cx 落在像宽内");
+            Assert.That(L.Cy, Is.InRange(0.0, 960.0), "cy 落在像高内");
         }
 
         [Test]

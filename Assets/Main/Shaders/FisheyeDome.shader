@@ -82,13 +82,15 @@ Shader "PicoTest/FisheyeDome"
                 float2 uv = isRight
                     ? ProjectUV(i.dirOS, _RightIntrin, _RightDist, _RightDist2, _RightRot, inFov)
                     : ProjectUV(i.dirOS, _LeftIntrin,  _LeftDist,  _LeftDist2,  _LeftRot,  inFov);
-                if (!inFov) return half4(0, 0, 0, 1);            // FOV 裁剪
+                if (!inFov) return half4(0, 0, 0, 0);            // 超 FOV → 透明，露出系统透视(外界)
                 // 眼图 [0,1] → 图集子区（SBS：左半/右半）
                 float4 rect = isRight ? _RightUVRect : _LeftUVRect;
                 uv = uv * rect.zw + rect.xy;
-                return isRight
+                half4 col = isRight
                     ? SAMPLE_TEXTURE2D(_RightTex, sampler_RightTex, uv)
                     : SAMPLE_TEXTURE2D(_LeftTex,  sampler_LeftTex,  uv);
+                col.a = 1;                                       // 有画面处不透明，盖住透视
+                return col;
             }
             ENDHLSL
         }

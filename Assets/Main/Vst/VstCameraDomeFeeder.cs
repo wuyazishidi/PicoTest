@@ -22,11 +22,16 @@ namespace PicoTest.Vst
         [Header("穹顶覆盖角 / 半径")]
         public float coverageDeg = 160f;
         public float radius = 20f;
+        [Header("低速云台伺服（混合转向慢分量：转头超死区才低速插值回中）")]
+        public bool enableGazeServo = true;
+        public float servoRateDegPerSec = 20f;   // 插值速度（慢→不给转头引入延迟）
+        public float servoDeadzoneDeg = 8f;       // “一定范围”：死区内自由环顾不驱动穹顶
 
         private FisheyeDomeRenderer _dome;
         private Transform _anchor;
         private Camera _xrCam;
         private Texture2D _tex;
+        private RobotHeadPoseDriver _servo;
 
         // 双缓冲：原生线程写 _back，主线程读 _front
         private byte[] _front, _back;
@@ -61,6 +66,13 @@ namespace PicoTest.Vst
             _dome.coverageDeg = coverageDeg; _dome.radius = radius; _dome.segments = 64;
             _dome.Initialize();
             _dome.PushParameters();
+
+            // 低速云台伺服：转头超死区才把穹顶锚点偏航低速插值跟到头朝向（保居中、可看 FOV 外）
+            _servo = gameObject.AddComponent<RobotHeadPoseDriver>();
+            _servo.robotHeadAnchor = _anchor;
+            _servo.followLocalHead = enableGazeServo;
+            _servo.rateDegPerSec = servoRateDegPerSec;
+            _servo.deadzoneDeg = servoDeadzoneDeg;
 
             // 开相机
             VstCamera.OnFrame += OnFrame;

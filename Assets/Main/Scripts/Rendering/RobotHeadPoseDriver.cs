@@ -14,8 +14,14 @@ namespace PicoTest.Rendering
         [Tooltip("被驱动的穹顶锚点（WorldLocked 下挂穹顶）")]
         public Transform robotHeadAnchor;
 
-        [Tooltip("目标注视偏航角（度）。外部每帧设置；首版可接 XR 头部平均朝向。")]
+        [Tooltip("目标注视偏航角（度）。外部每帧设置；首版可接 XR 头部平均朝向。followLocalHead=true 时由本组件自动算。")]
         public float targetYawDeg;
+
+        [Header("本地头部跟随（首版；真实场景改由机器人云台遥测/IMU 喂 targetYawDeg）")]
+        [Tooltip("勾选则每帧用头显偏航作为目标，实现“转头超死区才低速插值回中”")]
+        public bool followLocalHead = false;
+        [Tooltip("头显 Transform；留空自动取 Camera.main")]
+        public Transform headTransform;
 
         [Header("伺服参数（低速率→不给转头引入延迟）")]
         public float rateDegPerSec = 20f;   // 慢
@@ -32,6 +38,22 @@ namespace PicoTest.Rendering
         private void Update()
         {
             if (robotHeadAnchor == null) return;
+
+            if (followLocalHead)
+            {
+                var head = headTransform != null ? headTransform
+                         : (Camera.main != null ? Camera.main.transform : null);
+                if (head != null)
+                {
+                    // 头朝向投到锚点父空间求偏航（锚点用 localEulerAngles 驱动，故须同坐标系）
+                    var parent = robotHeadAnchor.parent;
+                    Vector3 f = parent != null ? parent.InverseTransformDirection(head.forward) : head.forward;
+                    f.y = 0f;
+                    if (f.sqrMagnitude > 1e-6f)
+                        targetYawDeg = Mathf.Atan2(f.x, f.z) * Mathf.Rad2Deg;
+                }
+            }
+
             _currentYaw = GazeServo.Step(_currentYaw, targetYawDeg, Time.deltaTime, rateDegPerSec, deadzoneDeg);
             var e = robotHeadAnchor.localEulerAngles;
             robotHeadAnchor.localEulerAngles = new Vector3(e.x, (float)_currentYaw, e.z);

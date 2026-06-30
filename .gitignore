@@ -89,3 +89,6 @@ Assets/StreamingAssets/metadata.json
 Assets/StreamingAssets/metadata.json.meta
 Assets/StreamingAssets/sbs_frame.png
 Assets/StreamingAssets/sbs_frame.png.meta
+
+# Unity Burst 调试产物(构建生成,勿提交)
+*_BurstDebugInformation_DoNotShip/

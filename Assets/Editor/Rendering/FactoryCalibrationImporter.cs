@@ -8,22 +8,29 @@ using PicoTest.Rendering;
 namespace PicoTest.Editor.Rendering
 {
     /// <summary>
-    /// 从 StreamingAssets/metadata.json 的 factory_calibration(model=equiDis62) 导入左右
-    /// 鱼眼标定为 FisheyeCalibration 资产。取 raw 鱼眼 K + D 前 6 径向（切向 p1/p2 按设计简化丢弃）。
-    /// 菜单：PicoTest/Import Factory Calibration (from metadata.json)。
+    /// 从 StreamingAssets/cam_calib.json(model=equiDis62) 导入左右鱼眼标定为 FisheyeCalibration 资产。
+    /// 取 raw 鱼眼 K + D 前 6 径向（切向 p1/p2 按设计简化丢弃）。
+    /// 新格式为扁平根级（left/right 直接在根）；兼容旧 metadata.json 的 streams.camera.factory_calibration。
+    /// 菜单：PicoTest/Import Factory Calibration (from cam_calib.json)。
     /// </summary>
     public static class FactoryCalibrationImporter
     {
-        private const string MetaPath = "Assets/StreamingAssets/metadata.json";
+        // 设备相机参数现以 cam_calib.json 形式放在 StreamingAssets（旧的 metadata.json 作回退）
+        private const string CalibPath = "Assets/StreamingAssets/cam_calib.json";
+        private const string LegacyMetaPath = "Assets/StreamingAssets/metadata.json";
         private const string OutDir = "Assets/Main/Settings/Calibration";
 
-        [MenuItem("PicoTest/Import Factory Calibration (from metadata.json)")]
+        [MenuItem("PicoTest/Import Factory Calibration (from cam_calib.json)")]
         public static void Import()
         {
-            if (!File.Exists(MetaPath)) { Debug.LogError($"metadata not found: {MetaPath}"); return; }
-            var json = JObject.Parse(File.ReadAllText(MetaPath));
-            var fc = json["streams"]?["camera"]?["factory_calibration"];
-            if (fc == null) { Debug.LogError("factory_calibration 缺失"); return; }
+            string path = File.Exists(CalibPath) ? CalibPath
+                        : File.Exists(LegacyMetaPath) ? LegacyMetaPath : null;
+            if (path == null) { Debug.LogError($"calibration not found: {CalibPath} (nor legacy {LegacyMetaPath})"); return; }
+
+            var json = JObject.Parse(File.ReadAllText(path));
+            // 新扁平格式：left/right 在根；旧格式：嵌在 streams.camera.factory_calibration
+            var fc = json["left"] != null ? json : json["streams"]?["camera"]?["factory_calibration"];
+            if (fc == null || fc["left"] == null) { Debug.LogError($"calibration 字段缺失（既非根级 left/right，也无 factory_calibration）：{path}"); return; }
 
             var res = fc["resolution_per_eye_wh"];
             int w = (int)res[0], h = (int)res[1];

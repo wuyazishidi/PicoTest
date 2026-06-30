@@ -18,9 +18,9 @@ namespace PicoTest.Vst
         [Header("出厂标定（左右各一，本机 A9410 = RealLeft/RealRight）")]
         public FisheyeCalibration leftCalibration, rightCalibration;
         [Header("分辨率 / fps")]
-        public int width = 2560, height = 960, fps = 60;
+        public int width = 2560, height = 960, fps = 30;
         [Header("穹顶覆盖角 / 半径")]
-        public float coverageDeg = 160f;
+        public float coverageDeg = 150f;
         public float radius = 20f;
         [Header("低速云台伺服（混合转向慢分量：转头超死区才低速插值回中）")]
         public bool enableGazeServo = true;

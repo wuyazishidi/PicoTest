@@ -33,7 +33,7 @@ namespace PicoTest.Vst
         public const int BytesPerPixel = 4;
         public static int FrameSize = 2560 * 960 * BytesPerPixel;
         public static int BufferSize = 2560 * 960 * BytesPerPixel + 1024 * 1024;
-        public static int Fps = 60; // 仅 30 是固件认的切换键；60 是默认
+        public static int Fps = 30; // 30 是固件认的切换键（采集帧率）；60 为出厂默认。Feeder 经 Configure 覆盖
 
         public static event Action<Frame> OnFrame;
 

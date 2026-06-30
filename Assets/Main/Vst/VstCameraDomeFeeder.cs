@@ -23,7 +23,7 @@ namespace PicoTest.Vst
         [Header("分辨率 / fps")]
         public int width = 2560, height = 960, fps = 30;
         [Header("穹顶覆盖角 / 半径")]
-        public float coverageDeg = 120f;
+        public float coverageDeg = 150f;
         public float radius = 20f;
         [Header("低速云台伺服（混合转向慢分量：转头超死区才低速插值回中）")]
         public bool enableGazeServo = true;

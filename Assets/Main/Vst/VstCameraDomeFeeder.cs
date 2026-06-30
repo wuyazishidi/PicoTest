@@ -1,8 +1,11 @@
 // Assets/Main/Vst/VstCameraDomeFeeder.cs
 using System;
+using System.Collections;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using Unity.XR.PICO.TOBSupport;
 using UnityEngine;
+using UnityEngine.XR;
 using PicoTest.Rendering;
 
 namespace PicoTest.Vst
@@ -20,18 +23,25 @@ namespace PicoTest.Vst
         [Header("分辨率 / fps")]
         public int width = 2560, height = 960, fps = 30;
         [Header("穹顶覆盖角 / 半径")]
-        public float coverageDeg = 150f;
+        public float coverageDeg = 120f;
         public float radius = 20f;
         [Header("低速云台伺服（混合转向慢分量：转头超死区才低速插值回中）")]
         public bool enableGazeServo = true;
         public float servoRateDegPerSec = 20f;   // 插值速度（慢→不给转头引入延迟）
         public float servoDeadzoneDeg = 8f;       // “一定范围”：死区内自由环顾不驱动穹顶
+        [Header("透视（VST passthrough）")]
+        public bool enableSeeThrough = true;      // 启动即开系统透视；穹顶外的区域显示真实环境而非黑边
+        [Header("退出（按 B：关相机服务 → 5s → 退程序）")]
+        public bool quitOnButtonB = true;
+        public float quitCameraCloseDelaySec = 5f;
 
         private FisheyeDomeRenderer _dome;
         private Transform _anchor;
         private Camera _xrCam;
         private Texture2D _tex;
         private RobotHeadPoseDriver _servo;
+        private bool _bPrev;       // B 键上升沿检测
+        private bool _quitting;    // 退出流程进行中
 
         // 双缓冲：原生线程写 _back，主线程读 _front
         private byte[] _front, _back;
@@ -45,6 +55,9 @@ namespace PicoTest.Vst
                 Debug.LogError("[VstFeeder] 未连标定（RealLeft/RealRight）。");
                 return;
             }
+
+            // 启动即开系统透视（VST passthrough）：穹顶覆盖角外显示真实环境而非黑
+            if (enableSeeThrough) EnableVideoSeeThrough();
 
             _front = new byte[width * height * 4];
             _back = new byte[width * height * 4];
@@ -95,6 +108,18 @@ namespace PicoTest.Vst
 
         private void Update()
         {
+            // 退出：按右手柄 B（secondaryButton）→ 关相机服务 → 5s → 退程序
+            if (quitOnButtonB && !_quitting)
+            {
+                var rh = InputDevices.GetDeviceAtXRNode(XRNode.RightHand);
+                if (rh.TryGetFeatureValue(CommonUsages.secondaryButton, out bool bNow))
+                {
+                    if (bNow && !_bPrev) StartQuit();
+                    _bPrev = bNow;
+                }
+            }
+            if (_quitting) return; // 退出流程中：停止相机泵与纹理上传
+
             VstCamera.PumpFromMain(); // 必须每帧泵（PICO 崩溃规避：延迟执行原生线程捕获的 JNI 活）
 
             if (_newFrame && _tex != null)
@@ -114,11 +139,50 @@ namespace PicoTest.Vst
                 if (_xrCam != null)
                 {
                     _xrCam.clearFlags = CameraClearFlags.SolidColor; // 穹顶是背景，关天空盒
-                    _xrCam.backgroundColor = Color.black;
+                    // 透视开启时清成透明（alpha=0）→ 合成器在穹顶未覆盖处显示真实环境；否则黑底
+                    _xrCam.backgroundColor = enableSeeThrough ? new Color(0f, 0f, 0f, 0f) : Color.black;
                 }
             }
             if (_xrCam != null && _anchor != null)
                 _anchor.position = _xrCam.transform.position;
+        }
+
+        /// <summary>反射开启系统透视（避免对 Unity.XR.PXR 程序集的编译期依赖；兼容 PXR/OpenXR 后端）。</summary>
+        private static void EnableVideoSeeThrough()
+        {
+            try
+            {
+                Type t = null;
+                foreach (var asm in AppDomain.CurrentDomain.GetAssemblies())
+                {
+                    t = asm.GetType("Unity.XR.PXR.PXR_Manager");
+                    if (t != null) break;
+                }
+                var p = t?.GetProperty("EnableVideoSeeThrough", BindingFlags.Public | BindingFlags.Static);
+                if (p != null && p.CanWrite) { p.SetValue(null, true); Debug.Log("[VstFeeder] 透视模式已开启"); }
+                else Debug.LogWarning("[VstFeeder] 未找到 PXR_Manager.EnableVideoSeeThrough，透视未开启");
+            }
+            catch (Exception e) { Debug.LogWarning($"[VstFeeder] 开启透视失败: {e.Message}"); }
+        }
+
+        private void StartQuit()
+        {
+            if (_quitting) return;
+            _quitting = true;
+            Debug.Log($"[VstFeeder] B 键退出：关闭相机服务，{quitCameraCloseDelaySec:F0}s 后退出程序");
+            StartCoroutine(QuitAfterCameraClose());
+        }
+
+        private IEnumerator QuitAfterCameraClose()
+        {
+            VstCamera.OnFrame -= OnFrame;
+            VstCamera.CloseCamera();                                     // 按官方示例关相机（CloseCamerafor4U）
+            yield return new WaitForSeconds(quitCameraCloseDelaySec);    // 等原生相机服务干净退出，避免崩溃
+            Debug.Log("[VstFeeder] 退出程序");
+            Application.Quit();
+#if UNITY_EDITOR
+            UnityEditor.EditorApplication.isPlaying = false;
+#endif
         }
 
         private void OnApplicationPause(bool paused)

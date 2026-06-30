@@ -307,6 +307,21 @@ namespace PicoTest.Vst
             }
         }
 
+        /// <summary>按 PICO 官方示例关闭相机：仅 CloseCamerafor4U()（不解绑 Enterprise 服务/不释放缓冲）。</summary>
+        public static void CloseCamera()
+        {
+            try
+            {
+                if (IsStreaming || IsOpen)
+                {
+                    PXR_Enterprise.CloseCamerafor4U();
+                    IsStreaming = false; IsOpen = false;
+                    Log.Info("CloseCamerafor4U（官方示例关闭相机）");
+                }
+            }
+            catch (Exception e) { Log.Error($"CloseCamera crashed: {e}"); }
+        }
+
         public static void PauseForScreenOff()
         {
             try

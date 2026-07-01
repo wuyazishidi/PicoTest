@@ -87,6 +87,40 @@ namespace PicoTest.Editor.Build
             }
         }
 
+        /// <summary>
+        /// 编辑器内构建 VST Live APK（不 Exit、不需 batchmode，与开着的编辑器共存）。
+        /// 菜单：PicoTest/Build VST Live (in-editor)。产物 Builds/PicoTest-VstLive.apk。
+        /// </summary>
+        [MenuItem("PicoTest/Build VST Live (in-editor)")]
+        public static void BuildVstLiveTestInEditor()
+        {
+            try
+            {
+                EnsureAndroidToolchain();
+                Directory.CreateDirectory(OutputDir);
+                string apkPath = Path.Combine(OutputDir, "PicoTest-VstLive.apk");
+
+                var options = new BuildPlayerOptions
+                {
+                    scenes = new[] { "Assets/Main/Scenes/FisheyeDomeXRLive.unity" },
+                    locationPathName = apkPath,
+                    target = BuildTarget.Android,
+                    // Release（非 Development）：关闭 CheckJNI，避免 PICO 相机回调 binder 线程的 JNI 检查 abort。
+                    // Debug.Log 在 Release 下仍输出，[VST] 诊断日志不受影响。
+                    options = BuildOptions.None,
+                };
+
+                BuildReport report = BuildPipeline.BuildPlayer(options);
+                BuildSummary summary = report.summary;
+                Debug.Log($"[Builder] InEditor VstLive(Release) result={summary.result} size={summary.totalSize} " +
+                          $"time={summary.totalTime} errors={summary.totalErrors} output={apkPath}");
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"[Builder] InEditor VstLive Exception: {e}");
+            }
+        }
+
         public static void BuildPico()
         {
             try

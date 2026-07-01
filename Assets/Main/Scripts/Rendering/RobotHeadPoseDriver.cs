@@ -25,9 +25,11 @@ namespace PicoTest.Rendering
 
         [Header("伺服参数（低速率→不给转头引入延迟）")]
         public float rateDegPerSec = 20f;   // 慢
-        public float deadzoneDeg = 8f;       // 死区：小幅头动不驱动云台
+        public float deadzoneDeg = 8f;       // 触发死区半角：死区内静止环顾，超出才跟随
+        public float returnDeg = 20f;        // 停靠残留半角：触发后穹顶带头到离中心此角度即停（应 < deadzoneDeg）
 
         private double _currentYaw;
+        private bool _following;             // 是否处于"带回停靠角"过程
 
         private void Start()
         {
@@ -54,8 +56,16 @@ namespace PicoTest.Rendering
                 }
             }
 
-            // 回边界：死区内静止环顾；超死区则限速跟随，直到头回到死区边缘即停（内容偏正前一个死区角）。
-            _currentYaw = GazeServo.Step(_currentYaw, targetYawDeg, Time.deltaTime, rateDegPerSec, deadzoneDeg);
+            // 两级迟滞：死区(deadzoneDeg)内静止环顾；头偏出死区即触发，穹顶限速把头带回到更小的停靠残留角
+            // (returnDeg) 才停 —— 移动量比只回死区边界大，画面更靠正前、黑边更少、看到内容更多。
+            double diff = System.Math.Abs(GazeServo.NormalizeDeg(targetYawDeg - _currentYaw));
+            if (!_following && diff > deadzoneDeg) _following = true;    // 超死区 → 触发
+            if (_following)
+            {
+                _currentYaw = GazeServo.Step(_currentYaw, targetYawDeg, Time.deltaTime, rateDegPerSec, returnDeg);
+                if (System.Math.Abs(GazeServo.NormalizeDeg(targetYawDeg - _currentYaw)) <= returnDeg)
+                    _following = false;    // 已带到停靠残留角 → 回到静止环顾
+            }
             var e = robotHeadAnchor.localEulerAngles;
             robotHeadAnchor.localEulerAngles = new Vector3(e.x, (float)_currentYaw, e.z);
         }

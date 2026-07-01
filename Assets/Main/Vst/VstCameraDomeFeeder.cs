@@ -27,8 +27,8 @@ namespace PicoTest.Vst
         public float radius = 20f;
         [Header("低速云台伺服（混合转向慢分量：转头超死区才低速插值回中）")]
         public bool enableGazeServo = true;
-        public float servoRateDegPerSec = 60f;   // 回中插值速度（度/秒）；回中时间 = 需转角度 ÷ 此值
-        public float servoDeadzoneDeg = 50f;      // 死区半角：自由环顾总范围 = 2×50 ≈ 100°(≈FOV)，超出才驱动穹顶
+        public float servoRateDegPerSec = 30f;   // 跟随速度（度/秒）
+        public float servoDeadzoneDeg = 60f;      // 死区半角：自由环顾总范围 = 2×60 ≈ 120°，超出才跟随到死区边缘
         [Header("透视（VST passthrough）")]
         public bool enableSeeThrough = true;      // 启动即开系统透视；穹顶外的区域显示真实环境而非黑边
         [Header("退出（按 B：关相机服务 → 5s → 退程序）")]

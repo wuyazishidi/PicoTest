@@ -28,8 +28,6 @@ namespace PicoTest.Rendering
         public float deadzoneDeg = 8f;       // 死区：小幅头动不驱动云台
 
         private double _currentYaw;
-        private bool _recentering;                 // 是否处于"回中到眼正前方"过程
-        private const double RecenterDoneDeg = 0.5; // 回中到位阈值
 
         private void Start()
         {
@@ -56,18 +54,8 @@ namespace PicoTest.Rendering
                 }
             }
 
-            // 迟滞回中：死区内静止环顾；一旦头偏出死区，插值到眼正前方(diff→0)而非停在死区边缘。
-            double diff = System.Math.Abs(GazeServo.NormalizeDeg(targetYawDeg - _currentYaw));
-            if (!_recentering && diff > deadzoneDeg) _recentering = true;   // 超死区 → 触发回中
-            if (_recentering)
-            {
-                // deadzone=0 → 一路限速逼近目标(头朝向=眼正前方)
-                _currentYaw = GazeServo.Step(_currentYaw, targetYawDeg, Time.deltaTime, rateDegPerSec, 0);
-                if (System.Math.Abs(GazeServo.NormalizeDeg(targetYawDeg - _currentYaw)) <= RecenterDoneDeg)
-                    _recentering = false;   // 已到眼正前方 → 回到静止环顾
-            }
-            // 未触发：保持不动（死区内自由环顾）
-
+            // 回边界：死区内静止环顾；超死区则限速跟随，直到头回到死区边缘即停（内容偏正前一个死区角）。
+            _currentYaw = GazeServo.Step(_currentYaw, targetYawDeg, Time.deltaTime, rateDegPerSec, deadzoneDeg);
             var e = robotHeadAnchor.localEulerAngles;
             robotHeadAnchor.localEulerAngles = new Vector3(e.x, (float)_currentYaw, e.z);
         }

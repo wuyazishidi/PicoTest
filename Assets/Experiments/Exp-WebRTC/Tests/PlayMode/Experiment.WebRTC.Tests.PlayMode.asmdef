@@ -1,0 +1,23 @@
+{
+    "name": "Experiment.WebRTC.Tests.PlayMode",
+    "rootNamespace": "PicoTest.Experiments.WebRTC.Tests",
+    "references": [
+        "Experiment.WebRTC",
+        "Main",
+        "Main.Core",
+        "UnityEngine.TestRunner"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "nunit.framework.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

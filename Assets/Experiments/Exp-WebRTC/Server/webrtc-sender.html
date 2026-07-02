@@ -2,19 +2,19 @@
 <html lang="zh">
 <head>
 <meta charset="utf-8">
-<title>Exp-WebRTC 测试发送端（SBS 双目鱼眼环回）</title>
-<style>body{font-family:sans-serif;margin:16px} #log{white-space:pre-wrap;font-family:monospace;font-size:12px;background:#111;color:#0f0;padding:8px;height:180px;overflow:auto} canvas{border:1px solid #ccc;width:640px;height:180px}</style>
+<title>Exp-WebRTC 发送端（循环播放 camera.mp4 → WebRTC）</title>
+<style>body{font-family:sans-serif;margin:16px} #log{white-space:pre-wrap;font-family:monospace;font-size:12px;background:#111;color:#0f0;padding:8px;height:180px;overflow:auto} video{border:1px solid #ccc;width:640px}</style>
 </head>
 <body>
-<h3>Exp-WebRTC 测试发送端</h3>
+<h3>Exp-WebRTC 发送端（camera.mp4 循环 → WebRTC → PICO）</h3>
 <p>信令：<input id="url" size="34" value="ws://172.16.3.95:8765"></p>
 <p>
   <button id="connect">1) 连接信令</button>
   <button id="call" disabled>2) 开始呼叫（发 offer）</button>
   <button id="hangup" disabled>挂断</button>
 </p>
-<p>发送画面（SBS 2560×720：左半红/右半蓝 + 移动竖条）：</p>
-<canvas id="cv" width="2560" height="720"></canvas>
+<p>发送源（本地循环播放，同源加载）：</p>
+<video id="vid" src="camera.mp4" loop muted autoplay playsinline></video>
 <div id="log"></div>
 
 <script>
@@ -22,44 +22,33 @@ const $ = id => document.getElementById(id);
 const logEl = $('log');
 function log(...a){ logEl.textContent += a.join(' ') + '\n'; logEl.scrollTop = logEl.scrollHeight; }
 
-// ---- 生成 SBS 测试画面 ----
-const cv = $('cv'), ctx = cv.getContext('2d');
-let frame = 0;
-function draw(){
-  const w = cv.width, h = cv.height, half = w/2;
-  ctx.fillStyle = '#c83028'; ctx.fillRect(0,0,half,h);      // 左眼：红
-  ctx.fillStyle = '#2830c8'; ctx.fillRect(half,0,half,h);   // 右眼：蓝
-  const x = (frame*8) % w;                                   // 移动竖条（验证动态刷新）
-  ctx.fillStyle = '#ffffff'; ctx.fillRect(x,0,20,h);
-  ctx.fillStyle = '#000'; ctx.font='48px sans-serif';
-  ctx.fillText('LEFT', 40, 80); ctx.fillText('RIGHT', half+40, 80);
-  frame++;
-  requestAnimationFrame(draw);
-}
-draw();
-const stream = cv.captureStream(30);
+const vid = $('vid');
+let stream = null;
+vid.addEventListener('loadeddata', () => {
+  try { stream = vid.captureStream ? vid.captureStream() : vid.mozCaptureStream(); log('video loaded', vid.videoWidth + 'x' + vid.videoHeight, '(SBS：左右各半)'); }
+  catch(e){ log('captureStream 失败', e.message); }
+});
+vid.addEventListener('error', () => log('video 加载失败：确认经 http://<PC-IP>:8765/ 打开本页，camera.mp4 在 Server/'));
+vid.play().catch(()=>{});
 
-// ---- 信令 + WebRTC ----
 let ws, pc;
 function send(o){ if (ws && ws.readyState===1) ws.send(JSON.stringify(o)); }
 
 $('connect').onclick = () => {
   ws = new WebSocket($('url').value);
   ws.onopen = () => { log('[ws] connected'); $('call').disabled=false; };
-  ws.onclose = () => { log('[ws] closed'); };
-  ws.onerror = e => log('[ws] error');
+  ws.onclose = () => log('[ws] closed');
+  ws.onerror = () => log('[ws] error');
   ws.onmessage = async (ev) => {
     const m = JSON.parse(ev.data);
-    if (m.type === 'answer') {
-      log('[sig] <- answer');
-      await pc.setRemoteDescription({ type:'answer', sdp:m.sdp });
-    } else if (m.type === 'candidate') {
-      try { await pc.addIceCandidate({ candidate:m.candidate, sdpMid:m.sdpMid, sdpMLineIndex:m.sdpMLineIndex }); } catch(e){ log('addIce err', e); }
-    }
+    if (m.type === 'answer') { log('[sig] <- answer'); await pc.setRemoteDescription({ type:'answer', sdp:m.sdp }); }
+    else if (m.type === 'candidate') { try { await pc.addIceCandidate({ candidate:m.candidate, sdpMid:m.sdpMid, sdpMLineIndex:m.sdpMLineIndex }); } catch(e){ log('addIce err', e.message); } }
   };
 };
 
 $('call').onclick = async () => {
+  if (!stream){ try { await vid.play(); stream = vid.captureStream(); } catch(e){} }
+  if (!stream || stream.getVideoTracks().length===0){ log('无视频轨：确认视频已加载/播放'); return; }
   pc = new RTCPeerConnection({ iceServers:[{ urls:'stun:stun.l.google.com:19302' }] });
   pc.onicecandidate = e => { if (e.candidate) send({ type:'candidate', candidate:e.candidate.candidate, sdpMid:e.candidate.sdpMid, sdpMLineIndex:e.candidate.sdpMLineIndex }); };
   pc.onconnectionstatechange = () => log('[pc]', pc.connectionState);
@@ -67,7 +56,7 @@ $('call').onclick = async () => {
   const offer = await pc.createOffer();
   await pc.setLocalDescription(offer);
   send({ type:'offer', sdp: offer.sdp });
-  log('[sig] -> offer');
+  log('[sig] -> offer（发送 camera.mp4 流）');
   $('call').disabled=true; $('hangup').disabled=false;
 };
 

@@ -27,8 +27,7 @@ namespace PicoTest.Vst
         public float radius = 20f;
         [Tooltip("边缘羽化角(度)：穹顶圆边缘 alpha 渐隐，柔化过渡到透视")]
         public float edgeFeatherDeg = 12f;
-        [Tooltip("底部垂直仰角截断(度)：只处理垂直——对齐相机竖直真实FOV(~-52°)，按仰角平滑淡出到透视，")]
-        [Tooltip("把竖直被画幅裁切的凹口换成平滑弧；匹配FOV不拉伸，水平不受影响。-90=关")]
+        [Tooltip("底部垂直仰角截断(度)：只处理垂直——对齐相机竖直真实FOV(~-52°)按仰角平滑淡出到透视；匹配FOV不拉伸，水平不受影响。-90=关")]
         public float bottomCutoffDeg = -50f;
         public float bottomFeatherDeg = 12f;
         [Header("低速云台伺服（混合转向慢分量：转头超死区才低速插值回中）")]

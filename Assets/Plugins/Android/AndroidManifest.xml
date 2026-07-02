@@ -6,6 +6,9 @@
     <uses-permission android:name="android.permission.CAMERA" />
     <!-- PICO VST 相机（Enterprise raw 鱼眼采集）必需，没它 OpenCameraAsyncfor4U 开不了 -->
     <uses-permission android:name="com.picovr.permission.CAMERA_VST" />
+    <!-- WebRTC（Exp-WebRTC）：信令 + 媒体传输需联网 -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
     <uses-feature android:name="android.hardware.vr.headtracking" android:required="true" android:version="1" />
 

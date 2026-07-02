@@ -5,8 +5,12 @@ EditorBuildSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 2
   m_Scenes:
-  - enabled: 1
+  - enabled: 0
     path: Assets/Main/Scenes/Main.unity
     guid: 30c32086ef25e0a4c8c7710c3f92275b
+  - enabled: 1
+    path: Assets/Main/Scenes/FisheyeDomeXRLive.unity
+    guid: aae2b2243324829499169f1aec8ce3cd
   m_configObjects:
+    Unity.XR.PXR.Settings: {fileID: 11400000, guid: 9218a9cacafe61247862a67b2f2eb6d7, type: 2}
     com.unity.xr.management.loader_settings: {fileID: 11400000, guid: 6f42fa735bfbc87498ec6ad76838215a, type: 2}

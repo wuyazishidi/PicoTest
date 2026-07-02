@@ -54,6 +54,105 @@ namespace PicoTest.Editor.Build
                       $"JDK={UnityEditor.Android.AndroidExternalToolsSettings.jdkRootPath}");
         }
 
+        /// <summary>
+        /// 专用：只构建 VST 实时鱼眼穹顶测试场景到 Builds/PicoTest-VstLive.apk（dev 构建，便于 adb logcat
+        /// 看 [VST] 诊断）。不依赖 EditorBuildSettings。需编辑器关闭（batchmode 与 YIUIMCP 互斥）+ PICO 4U 设备。
+        /// 用法：Unity.exe -batchmode -quit -projectPath ... -buildTarget Android -executeMethod PicoTest.Editor.Build.Builder.BuildVstLiveTest -logFile build.log
+        /// </summary>
+        public static void BuildVstLiveTest()
+        {
+            try
+            {
+                EnsureAndroidToolchain();
+                Directory.CreateDirectory(OutputDir);
+                string apkPath = Path.Combine(OutputDir, "PicoTest-VstLive.apk");
+
+                var options = new BuildPlayerOptions
+                {
+                    scenes = new[] { "Assets/Main/Scenes/FisheyeDomeXRLive.unity" },
+                    locationPathName = apkPath,
+                    target = BuildTarget.Android,
+                    options = BuildOptions.Development | BuildOptions.AllowDebugging,
+                };
+
+                BuildReport report = BuildPipeline.BuildPlayer(options);
+                BuildSummary summary = report.summary;
+                Debug.Log($"[Builder] VstLive result={summary.result} size={summary.totalSize} time={summary.totalTime} errors={summary.totalErrors} output={apkPath}");
+                EditorApplication.Exit(summary.result == BuildResult.Succeeded ? 0 : 1);
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"[Builder] VstLive Exception: {e}");
+                EditorApplication.Exit(1);
+            }
+        }
+
+        /// <summary>
+        /// 编辑器内构建 VST Live APK（不 Exit、不需 batchmode，与开着的编辑器共存）。
+        /// 菜单：PicoTest/Build VST Live (in-editor)。产物 Builds/PicoTest-VstLive.apk。
+        /// </summary>
+        [MenuItem("PicoTest/Build VST Live (in-editor)")]
+        public static void BuildVstLiveTestInEditor()
+        {
+            try
+            {
+                EnsureAndroidToolchain();
+                Directory.CreateDirectory(OutputDir);
+                string apkPath = Path.Combine(OutputDir, "PicoTest-VstLive.apk");
+
+                var options = new BuildPlayerOptions
+                {
+                    scenes = new[] { "Assets/Main/Scenes/FisheyeDomeXRLive.unity" },
+                    locationPathName = apkPath,
+                    target = BuildTarget.Android,
+                    // Release（非 Development）：关闭 CheckJNI，避免 PICO 相机回调 binder 线程的 JNI 检查 abort。
+                    // Debug.Log 在 Release 下仍输出，[VST] 诊断日志不受影响。
+                    options = BuildOptions.None,
+                };
+
+                BuildReport report = BuildPipeline.BuildPlayer(options);
+                BuildSummary summary = report.summary;
+                Debug.Log($"[Builder] InEditor VstLive(Release) result={summary.result} size={summary.totalSize} " +
+                          $"time={summary.totalTime} errors={summary.totalErrors} output={apkPath}");
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"[Builder] InEditor VstLive Exception: {e}");
+            }
+        }
+
+        /// <summary>
+        /// 编辑器内构建 WebRTC 双目鱼眼穹顶 APK（Exp-WebRTC 场景，Release）。
+        /// 菜单：PicoTest/Build WebRTC Dome (in-editor)。产物 Builds/PicoTest-WebRtc.apk。
+        /// </summary>
+        [MenuItem("PicoTest/Build WebRTC Dome (in-editor)")]
+        public static void BuildWebRtcInEditor()
+        {
+            try
+            {
+                EnsureAndroidToolchain();
+                Directory.CreateDirectory(OutputDir);
+                string apkPath = Path.Combine(OutputDir, "PicoTest-WebRtc.apk");
+
+                var options = new BuildPlayerOptions
+                {
+                    scenes = new[] { "Assets/Experiments/Exp-WebRTC/Scenes/WebRtcDomeXRLive.unity" },
+                    locationPathName = apkPath,
+                    target = BuildTarget.Android,
+                    options = BuildOptions.None,   // Release：关 CheckJNI
+                };
+
+                BuildReport report = BuildPipeline.BuildPlayer(options);
+                BuildSummary summary = report.summary;
+                Debug.Log($"[Builder] InEditor WebRtc(Release) result={summary.result} size={summary.totalSize} " +
+                          $"time={summary.totalTime} errors={summary.totalErrors} output={apkPath}");
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"[Builder] InEditor WebRtc Exception: {e}");
+            }
+        }
+
         public static void BuildPico()
         {
             try

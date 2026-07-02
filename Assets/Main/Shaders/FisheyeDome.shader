@@ -1,0 +1,108 @@
+Shader "PicoTest/FisheyeDome"
+{
+    Properties
+    {
+        _LeftTex ("Left Eye", 2D) = "black" {}
+        _RightTex ("Right Eye", 2D) = "black" {}
+        _ThetaMax ("Theta Max (rad)", Float) = 1.91986
+        _EdgeFeather ("Edge Feather (rad)", Float) = 0
+        _BoundsFeather ("Bounds Feather (uv)", Float) = 0
+        _FlipV ("Flip V", Float) = 0
+        _Mirror ("Mirror U", Float) = 0
+    }
+    SubShader
+    {
+        Tags { "RenderType"="Background" "Queue"="Background" "RenderPipeline"="UniversalPipeline" }
+        Cull Front      // 看球内壁
+        ZWrite Off
+        ZTest LEqual
+
+        Pass
+        {
+            HLSLPROGRAM
+            #pragma vertex vert
+            #pragma fragment frag
+            #pragma multi_compile_instancing
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+
+            // 左右各一套：内参(fx,fy,cx,cy)、畸变(k1..k4)、外参 3x3、图像尺寸
+            float4 _LeftIntrin, _RightIntrin;   // xy=f, zw=c
+            float4 _LeftDist, _RightDist;       // k1..k4
+            float4 _LeftDist2, _RightDist2;     // k5,k6,_,_
+            float4x4 _LeftRot, _RightRot;       // 3x3 置于左上
+            float4 _ImgSize;                    // xy = (w,h)
+            float4 _LeftUVRect, _RightUVRect;   // 眼图 [0,1] → 图集子区: uv*zw + xy（SBS 分半）
+            float _ThetaMax, _EdgeFeather, _BoundsFeather, _FlipV, _Mirror;
+            TEXTURE2D(_LeftTex);  SAMPLER(sampler_LeftTex);
+            TEXTURE2D(_RightTex); SAMPLER(sampler_RightTex);
+
+            struct Attributes
+            {
+                float4 positionOS : POSITION;
+                UNITY_VERTEX_INPUT_INSTANCE_ID
+            };
+            struct Varyings
+            {
+                float4 positionCS : SV_POSITION;
+                float3 dirOS : TEXCOORD0;
+                UNITY_VERTEX_OUTPUT_STEREO
+            };
+
+            Varyings vert(Attributes v)
+            {
+                Varyings o;
+                UNITY_SETUP_INSTANCE_ID(v);
+                UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
+                o.positionCS = TransformObjectToHClip(v.positionOS.xyz);
+                o.dirOS = normalize(v.positionOS.xyz);  // 视线方向 = 顶点方向（穹顶居中眼点）
+                return o;
+            }
+
+            // === 与 FisheyeProjection.ProjectDirection 逐行一致（径向 k1..k6，Horner） ===
+            float2 ProjectUV(float3 d, float4 intrin, float4 k, float4 k2c, float4x4 R, out bool inFov, out float thetaOut)
+            {
+                float3 c = mul((float3x3)R, d);
+                float rxy = length(c.xy);
+                float theta = atan2(rxy, c.z);
+                thetaOut = theta;
+                inFov = theta <= _ThetaMax;
+                float t2 = theta * theta;
+                float thetaD = theta * (1 + t2*(k.x + t2*(k.y + t2*(k.z + t2*(k.w + t2*(k2c.x + t2*k2c.y))))));
+                float2 phi = (rxy < 1e-6) ? float2(0, 0) : c.xy / rxy;
+                float u = intrin.x * (thetaD * phi.x) + intrin.z;
+                float v = intrin.y * (thetaD * phi.y) + intrin.w;
+                float2 uv = float2(u / _ImgSize.x, v / _ImgSize.y);
+                if (_Mirror > 0.5) uv.x = 1 - uv.x;
+                if (_FlipV > 0.5)  uv.y = 1 - uv.y;
+                return uv;
+            }
+
+            half4 frag(Varyings i) : SV_Target
+            {
+                UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i);
+                bool isRight = unity_StereoEyeIndex == 1;
+                bool inFov; float theta;
+                float2 uvEye = isRight
+                    ? ProjectUV(i.dirOS, _RightIntrin, _RightDist, _RightDist2, _RightRot, inFov, theta)
+                    : ProjectUV(i.dirOS, _LeftIntrin,  _LeftDist,  _LeftDist2,  _LeftRot,  inFov, theta);
+                if (!inFov) return half4(0, 0, 0, 0);            // 超 FOV → 透明，露出系统透视(外界)
+                // 眼图 [0,1] → 图集子区（SBS：左半/右半）
+                float4 rect = isRight ? _RightUVRect : _LeftUVRect;
+                float2 uv = uvEye * rect.zw + rect.xy;
+                half4 col = isRight
+                    ? SAMPLE_TEXTURE2D(_RightTex, sampler_RightTex, uv)
+                    : SAMPLE_TEXTURE2D(_LeftTex,  sampler_LeftTex,  uv);
+                // (a) 角度边缘羽化：最后 _EdgeFeather 弧度内 alpha 1→0
+                half aTheta = (_EdgeFeather > 1e-4) ? (half)saturate((_ThetaMax - theta) / _EdgeFeather) : 1.0h;
+                // (b) 图像边界羽化：采样 UV 超出眼图 [0,1]（如竖直被画幅裁切区）→ 透明并羽化，
+                //     避免 Clamp 采到黑边形成硬黑带；改为柔和渐隐到透视
+                float2 dEdge = min(uvEye, 1.0 - uvEye);          // 到最近边界距离（<0 即出界）
+                float md = min(dEdge.x, dEdge.y);
+                half aBounds = (_BoundsFeather > 1e-5) ? (half)saturate(md / _BoundsFeather) : (half)step(0.0, md);
+                col.a = min(aTheta, aBounds);                    // 两者取严：内部不透明(盖透视)，边缘/出界渐隐
+                return col;
+            }
+            ENDHLSL
+        }
+    }
+}

@@ -20,6 +20,20 @@
 
 `ChunkWriter.FormatVersion`（chunk 文件容器格式）与 `CoreInfo.SchemaVersion`（帧内容 schema）相互独立，各自递增。容器格式升级（如头部字段变更）不影响帧内容版本；帧内 schema 演进（如新增骨骼字段）不触发容器版本升级。
 
+## 2026-07-02 | WebRTC 机器人双目鱼眼接收（Exp-WebRTC）
+
+| 决策 | 理由 |
+|---|---|
+| WebRTC = **Unity 官方 `com.unity.webrtc` 3.0.0-pre.8**（先实现） | 用户改定；自带 libwebrtc（含 Android arm64）+ C# API，**免自写 C wrapper/P-Invoke/NDK**；帧以 GPU `Texture` 交付直接喂穹顶。3.0.0 需 Unity 6，故钉 pre.8（支持 2020.3+，兼容 2022.3.16f1） |
+| ~~shiguredo/webrtc-build + 自写 C wrapper + P/Invoke~~ | **作废**（改用官方包）；native/、WebRtcInterop 留历史/删 |
+| 显示/云台/透视/退出复用 FisheyeDomeXRLive，仅换数据源 | dome 管线源无关；官方包给 `Texture` → 直接作 leftTex/rightTex（SBS UV 分半），免 byte 双缓冲 |
+| 视频格式 = 双目鱼眼 SBS 2560×720（每眼 1280×720） | 机器人相机（用户定）；dome 与分辨率无关 |
+| 信令首版 = 自定义 JSON/WebSocket（`ISignaling` 可换 HTTP/Ayame） | com.unity.webrtc 不含信令；现有 IHttpTransport 无 WebSocket；本地易搭 |
+| 新增依赖 `com.unity.webrtc` + Android 权限 INTERNET / ACCESS_NETWORK_STATE | 官方包 + WebRTC 联网 |
+| 落位 `Assets/Experiments/Exp-WebRTC/`，验证后晋升 | 宪法：先实验隔离 |
+
+> 遗留：机器人相机鱼眼标定（每眼 1280×720）为外部依赖；com.unity.webrtc 在 PICO 的硬解/兼容性待真机验证；APK 体积（含 libwebrtc）。见 `.claude/plans/2026-07-02-webrtc-stereo-dome.md`。
+
 ## 待决（需要外部输入）
 
 - 后端接口契约（OpenAPI）：后端是否已存在？不存在则 M2 交付最小接收服务

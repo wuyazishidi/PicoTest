@@ -1,0 +1,20 @@
+{
+    "name": "Experiment.WebRTC.Editor",
+    "rootNamespace": "PicoTest.Experiments.WebRTC.Editor",
+    "references": [
+        "Experiment.WebRTC",
+        "Main",
+        "Main.Core"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

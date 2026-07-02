@@ -26,12 +26,12 @@ const server = http.createServer((req, res) => {
       const start = parseInt(m[1], 10);
       const end = m[2] ? parseInt(m[2], 10) : st.size - 1;
       res.writeHead(206, {
-        'Content-Type': type, 'Accept-Ranges': 'bytes',
+        'Content-Type': type, 'Accept-Ranges': 'bytes', 'Access-Control-Allow-Origin': '*',
         'Content-Range': `bytes ${start}-${end}/${st.size}`, 'Content-Length': end - start + 1,
       });
       fs.createReadStream(file, { start, end }).pipe(res);
     } else {
-      res.writeHead(200, { 'Content-Type': type, 'Content-Length': st.size, 'Accept-Ranges': 'bytes' });
+      res.writeHead(200, { 'Content-Type': type, 'Content-Length': st.size, 'Accept-Ranges': 'bytes', 'Access-Control-Allow-Origin': '*' });
       fs.createReadStream(file).pipe(res);
     }
   });

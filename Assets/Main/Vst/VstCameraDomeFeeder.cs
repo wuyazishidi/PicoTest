@@ -23,7 +23,7 @@ namespace PicoTest.Vst
         [Header("分辨率 / fps")]
         public int width = 2560, height = 960, fps = 30;
         [Header("穹顶覆盖角 / 半径")]
-        public float coverageDeg = 150f;
+        public float coverageDeg = 146f;   // 精确贴合相机水平真实 FOV(标定反解 ~145-151°；>此为空区拉花)
         public float radius = 20f;
         [Tooltip("边缘羽化角(度)：低头等越过穹顶边缘时，硬边圆弧柔化渐隐到透视")]
         public float edgeFeatherDeg = 12f;

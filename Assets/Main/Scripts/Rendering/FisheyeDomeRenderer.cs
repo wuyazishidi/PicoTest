@@ -21,6 +21,8 @@ namespace PicoTest.Rendering
         [Header("穹顶")] public float coverageDeg = 220f; public int segments = 48; public float radius = 20f;
         [Tooltip("边缘羽化角(度)：最后这几度 alpha 渐隐，硬边圆弧柔化过渡到透视；0=硬切")]
         public float edgeFeatherDeg = 0f;
+        [Tooltip("图像边界羽化(uv)：采样超出眼图[0,1](如竖直被画幅裁切区)→透明并羽化，避免硬黑带；0=硬切")]
+        public float boundsFeatherUV = 0.03f;
         [Range(0, 1)] public float flipV = 0, mirror = 0;
         public Shader domeShader; // 指 PicoTest/FisheyeDome；空则 Shader.Find
 
@@ -57,6 +59,7 @@ namespace PicoTest.Rendering
             _mpb.SetVector("_RightUVRect", rightUVRect);
             _mpb.SetFloat("_ThetaMax", thetaMax);
             _mpb.SetFloat("_EdgeFeather", Mathf.Deg2Rad * edgeFeatherDeg);
+            _mpb.SetFloat("_BoundsFeather", boundsFeatherUV);
             _mpb.SetFloat("_FlipV", flipV);
             _mpb.SetFloat("_Mirror", mirror);
 

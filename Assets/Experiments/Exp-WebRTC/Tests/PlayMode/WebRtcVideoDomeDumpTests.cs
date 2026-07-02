@@ -43,8 +43,7 @@ namespace PicoTest.Experiments.WebRTC.Tests
             var left = Cal(585.61f, 579.22f, 631.05f, 482.05f, -0.1470f, 0.4471f, -1.2333f, 1.4042f, -0.7284f, 0.1433f);
             var right = Cal(582.20f, 575.61f, 634.43f, 485.29f, -0.1427f, 0.4120f, -1.1371f, 1.2843f, -0.6592f, 0.1282f);
 
-            yield return RenderDump(src.Frame, left, right, 0f, 100f, 40f, 150f, 0f, "webrtc_dome_down150.png");     // 下俯40°，硬边（复现弧）
-            yield return RenderDump(src.Frame, left, right, 0f, 100f, 40f, 150f, 12f, "webrtc_dome_feather.png");   // 下俯40°，羽化12°（柔化）
+            yield return RenderDump(src.Frame, left, right, 0f, 100f, 40f, 146f, 12f, "webrtc_dome_feather.png");   // 下俯40°，覆盖146+羽化（含 alpha 灰度图验证竖直边缘）
 
             src.Stop();
             Assert.Pass("已出图 Artifacts/webrtc_dome_flip0.png 与 _flip1.png");
@@ -77,14 +76,19 @@ namespace PicoTest.Experiments.WebRTC.Tests
                 cam.SubmitRenderRequest(req);
                 yield return new WaitForEndOfFrame();
                 RenderTexture.active = rt;
-                var read = new Texture2D(1024, 1024, TextureFormat.RGB24, false);
+                var read = new Texture2D(1024, 1024, TextureFormat.RGBA32, false);
                 read.ReadPixels(new Rect(0, 0, 1024, 1024), 0, 0); read.Apply();
                 RenderTexture.active = null;
                 var outDir = Path.GetFullPath(Path.Combine(Application.dataPath, "../Artifacts"));
                 Directory.CreateDirectory(outDir);
                 File.WriteAllBytes(Path.Combine(outDir, name), read.EncodeToPNG());
-                Debug.Log("[VideoDome] dumped Artifacts/" + name);
-                Object.Destroy(read);
+                // alpha 灰度图：白=不透明(有画面盖透视)，黑=透明(渐隐到透视)——验证竖直边界/角度羽化
+                var px = read.GetPixels32();
+                for (int p = 0; p < px.Length; p++) { byte a = px[p].a; px[p] = new Color32(a, a, a, 255); }
+                var av = new Texture2D(1024, 1024, TextureFormat.RGBA32, false); av.SetPixels32(px); av.Apply();
+                File.WriteAllBytes(Path.Combine(outDir, name.Replace(".png", "_alpha.png")), av.EncodeToPNG());
+                Debug.Log("[VideoDome] dumped Artifacts/" + name + " (+_alpha)");
+                Object.Destroy(read); Object.Destroy(av);
             }
             Object.Destroy(rig); Object.Destroy(ro); rt.Release();
         }

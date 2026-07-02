@@ -121,6 +121,38 @@ namespace PicoTest.Editor.Build
             }
         }
 
+        /// <summary>
+        /// 编辑器内构建 WebRTC 双目鱼眼穹顶 APK（Exp-WebRTC 场景，Release）。
+        /// 菜单：PicoTest/Build WebRTC Dome (in-editor)。产物 Builds/PicoTest-WebRtc.apk。
+        /// </summary>
+        [MenuItem("PicoTest/Build WebRTC Dome (in-editor)")]
+        public static void BuildWebRtcInEditor()
+        {
+            try
+            {
+                EnsureAndroidToolchain();
+                Directory.CreateDirectory(OutputDir);
+                string apkPath = Path.Combine(OutputDir, "PicoTest-WebRtc.apk");
+
+                var options = new BuildPlayerOptions
+                {
+                    scenes = new[] { "Assets/Experiments/Exp-WebRTC/Scenes/WebRtcDomeXRLive.unity" },
+                    locationPathName = apkPath,
+                    target = BuildTarget.Android,
+                    options = BuildOptions.None,   // Release：关 CheckJNI
+                };
+
+                BuildReport report = BuildPipeline.BuildPlayer(options);
+                BuildSummary summary = report.summary;
+                Debug.Log($"[Builder] InEditor WebRtc(Release) result={summary.result} size={summary.totalSize} " +
+                          $"time={summary.totalTime} errors={summary.totalErrors} output={apkPath}");
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"[Builder] InEditor WebRtc Exception: {e}");
+            }
+        }
+
         public static void BuildPico()
         {
             try

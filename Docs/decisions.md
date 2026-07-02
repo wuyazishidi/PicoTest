@@ -24,15 +24,15 @@
 
 | 决策 | 理由 |
 |---|---|
-| WebRTC 技术栈 = shiguredo/webrtc-build（预编译 libwebrtc）+ 自写 C API wrapper（`extern "C"`，libyuv 做 I420→RGBA）+ Unity P/Invoke | 用户指定；预编译免自编 libwebrtc；C wrapper 隔离 C++ 符号供 P/Invoke |
-| **首个原生插件**：.so 入 `Assets/Plugins/Android/libs/arm64-v8a/`，`WEBRTC_NATIVE` 宏门控编入 | 此前项目无 P/Invoke；宏门控使缺库时默认走假帧源、不破坏构建 |
-| 显示/云台/透视/退出复用 FisheyeDomeXRLive，仅换数据源 | 探索确认 dome 管线源无关；feeder 只需产出 RGBA32 SBS 纹理 |
-| 视频格式 = 双目鱼眼 SBS 2560×720（每眼 1280×720） | 机器人相机（用户定）；dome 与分辨率无关，仅需对应标定 + SBS 分半 |
-| 信令首版 = 自定义 JSON/WebSocket（`ISignaling` 可换 HTTP/Ayame） | 现有 IHttpTransport 无 WebSocket；本地易搭；抽象留后路 |
-| 新增 Android 权限 INTERNET / ACCESS_NETWORK_STATE | WebRTC 信令 + 媒体传输需联网 |
-| 落位 `Assets/Experiments/Exp-WebRTC/`，验证后晋升 | 宪法：原生集成风险高，先实验隔离 |
+| WebRTC = **Unity 官方 `com.unity.webrtc` 3.0.0-pre.8**（先实现） | 用户改定；自带 libwebrtc（含 Android arm64）+ C# API，**免自写 C wrapper/P-Invoke/NDK**；帧以 GPU `Texture` 交付直接喂穹顶。3.0.0 需 Unity 6，故钉 pre.8（支持 2020.3+，兼容 2022.3.16f1） |
+| ~~shiguredo/webrtc-build + 自写 C wrapper + P/Invoke~~ | **作废**（改用官方包）；native/、WebRtcInterop 留历史/删 |
+| 显示/云台/透视/退出复用 FisheyeDomeXRLive，仅换数据源 | dome 管线源无关；官方包给 `Texture` → 直接作 leftTex/rightTex（SBS UV 分半），免 byte 双缓冲 |
+| 视频格式 = 双目鱼眼 SBS 2560×720（每眼 1280×720） | 机器人相机（用户定）；dome 与分辨率无关 |
+| 信令首版 = 自定义 JSON/WebSocket（`ISignaling` 可换 HTTP/Ayame） | com.unity.webrtc 不含信令；现有 IHttpTransport 无 WebSocket；本地易搭 |
+| 新增依赖 `com.unity.webrtc` + Android 权限 INTERNET / ACCESS_NETWORK_STATE | 官方包 + WebRTC 联网 |
+| 落位 `Assets/Experiments/Exp-WebRTC/`，验证后晋升 | 宪法：先实验隔离 |
 
-> 遗留：机器人相机鱼眼标定（每眼 1280×720）为外部依赖；shiguredo 版本/体积/授权；编解码硬解可用性。见 `.claude/plans/2026-07-02-webrtc-stereo-dome.md`。
+> 遗留：机器人相机鱼眼标定（每眼 1280×720）为外部依赖；com.unity.webrtc 在 PICO 的硬解/兼容性待真机验证；APK 体积（含 libwebrtc）。见 `.claude/plans/2026-07-02-webrtc-stereo-dome.md`。
 
 ## 待决（需要外部输入）
 

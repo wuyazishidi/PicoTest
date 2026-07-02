@@ -40,7 +40,7 @@ namespace PicoTest.Experiments.WebRTC.Editor
             var feeder = go.AddComponent<WebRtcDomeFeeder>();
             feeder.leftCalibration = left;
             feeder.rightCalibration = right;
-            feeder.width = 2560; feeder.height = 720;   // SBS 每眼 1280×720
+            // 分辨率由视频源(纹理)决定：SBS 2560×720，每眼 1280×720
 
             System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(ScenePath));
             EditorSceneManager.SaveScene(scene, ScenePath);

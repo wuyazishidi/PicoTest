@@ -1,52 +1,43 @@
-using System;
-using System.Threading;
 using NUnit.Framework;
+using UnityEngine;
 using PicoTest.Experiments.WebRTC;
 
 namespace PicoTest.Experiments.WebRTC.Tests
 {
-    /// <summary>假帧源纯 C# 单测：后台线程按约定尺寸投帧（模拟原生解码线程）。</summary>
+    /// <summary>假帧源单测（Texture 化，与 com.unity.webrtc 的 Texture 交付一致）。</summary>
     public class FakeStereoVideoSourceTests
     {
         [Test]
-        public void DeliversFrame_WithExpectedSizeAndDims()
+        public void ProducesTexture_WithExpectedDimsAndNonBlack()
         {
-            const int W = 2560, H = 720;
-            var src = new FakeStereoVideoSource(W, H, 60);
-            int gotSize = 0, gotW = 0, gotH = 0;
-            bool ptrNonNull = false;
-            var evt = new ManualResetEventSlim(false);
-
-            Action<IntPtr, int, int, int> h = (data, size, w, hh) =>
-            {
-                gotSize = size; gotW = w; gotH = hh; ptrNonNull = data != IntPtr.Zero;
-                evt.Set();
-            };
-            src.OnFrame += h;
+            var s = new FakeStereoVideoSource(2560, 720);
             try
             {
-                src.Start();
-                Assert.IsTrue(evt.Wait(2000), "2s 内未收到帧");
+                s.Start();
+                s.Tick();
+                var t = s.Frame as Texture2D;
+                Assert.IsNotNull(t, "无纹理");
+                Assert.AreEqual(2560, t.width);
+                Assert.AreEqual(720, t.height);
+                var c = t.GetPixel(t.width / 2, t.height / 2);
+                Assert.Greater(c.r + c.g + c.b, 0.01f, "中心像素为黑");
             }
-            finally
-            {
-                src.OnFrame -= h;
-                src.Stop();
-            }
+            finally { s.Stop(); }
+        }
 
-            Assert.IsTrue(ptrNonNull, "帧指针为空");
-            Assert.AreEqual(W, gotW, "宽");
-            Assert.AreEqual(H, gotH, "高");
-            Assert.AreEqual(W * H * 4, gotSize, "RGBA32 字节数");
+        [Test]
+        public void GetRenderPump_IsNull()
+        {
+            Assert.IsNull(new FakeStereoVideoSource().GetRenderPump());
         }
 
         [Test]
         public void StopIsIdempotent_AndSafeWithoutStart()
         {
-            var src = new FakeStereoVideoSource(64, 64, 30);
-            Assert.DoesNotThrow(() => src.Stop());          // 未 Start 直接 Stop
-            src.Start();
-            Assert.DoesNotThrow(() => { src.Stop(); src.Stop(); }); // 重复 Stop
+            var s = new FakeStereoVideoSource(64, 64);
+            Assert.DoesNotThrow(() => s.Stop());
+            s.Start();
+            Assert.DoesNotThrow(() => { s.Stop(); s.Stop(); });
         }
     }
 }

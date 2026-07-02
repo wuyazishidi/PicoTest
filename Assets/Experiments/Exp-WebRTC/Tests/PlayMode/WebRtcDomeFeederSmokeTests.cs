@@ -8,8 +8,8 @@ using PicoTest.Experiments.WebRTC;
 namespace PicoTest.Experiments.WebRTC.Tests
 {
     /// <summary>
-    /// PlayMode 冒烟：WebRtcDomeFeeder 用假帧源，验证 源(生产者线程)→双缓冲→Texture2D 上传 打通
-    /// （纹理中心像素非黑）。标定在代码里造（不依赖 AssetDatabase）；透视/退出关掉以免依赖 XR。
+    /// PlayMode 冒烟：WebRtcDomeFeeder 用假帧源（Texture 交付），验证 源→穹顶纹理绑定 打通
+    /// （feeder.Frame 中心像素非黑）。透视/退出/真实 WebRTC 关掉以免依赖 XR/网络。
     /// </summary>
     public class WebRtcDomeFeederSmokeTests
     {
@@ -22,33 +22,32 @@ namespace PicoTest.Experiments.WebRTC.Tests
         }
 
         [UnityTest]
-        public IEnumerator Feeder_UploadsNonBlackFrame()
+        public IEnumerator Feeder_ShowsNonBlackFrame()
         {
             var go = new GameObject("WebRtcFeederTest");
             go.SetActive(false);
             var f = go.AddComponent<WebRtcDomeFeeder>();
             f.leftCalibration = MakeCalib();
             f.rightCalibration = MakeCalib();
-            f.width = 2560; f.height = 720;
-            f.enableSeeThrough = false;   // 测试环境无 PICO 透视
-            f.quitOnButtonB = false;      // 不依赖手柄
-            go.SetActive(true);           // 触发 Start()（PlayMode 下 MonoBehaviour 正常 tick）
+            f.enableSeeThrough = false;
+            f.quitOnButtonB = false;
+            f.useRealWebRtc = false;   // 用假帧源
+            go.SetActive(true);        // 触发 Start()
 
-            bool nonBlack = false;
-            float t = 0f;
-            while (t < 5f && !nonBlack)
+            bool ok = false; float t = 0f;
+            while (t < 5f && !ok)
             {
                 yield return null;
                 t += Time.deltaTime;
-                var tex = f.Texture;
+                var tex = f.Frame as Texture2D;
                 if (tex != null)
                 {
-                    var col = tex.GetPixel(tex.width / 2, tex.height / 2);
-                    if (col.r + col.g + col.b > 0.01f) nonBlack = true;
+                    var c = tex.GetPixel(tex.width / 2, tex.height / 2);
+                    if (c.r + c.g + c.b > 0.01f) ok = true;
                 }
             }
 
-            Assert.IsTrue(nonBlack, "5s 内未把非黑帧上传到纹理（源→双缓冲→纹理链路未打通）");
+            Assert.IsTrue(ok, "5s 内 feeder 未产出非黑帧（源→穹顶链路未打通）");
             Object.Destroy(go);
         }
     }

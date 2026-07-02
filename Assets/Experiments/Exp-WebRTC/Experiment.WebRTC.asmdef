@@ -3,7 +3,8 @@
     "rootNamespace": "PicoTest.Experiments.WebRTC",
     "references": [
         "Main",
-        "Main.Core"
+        "Main.Core",
+        "Unity.WebRTC"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

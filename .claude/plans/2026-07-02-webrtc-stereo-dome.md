@@ -1,5 +1,11 @@
 # 计划：WebRTC 机器人双目鱼眼 → 穹顶接收显示场景
 
+> **更新 2026-07-02：技术栈改用 Unity 官方 `com.unity.webrtc`（3.0.0-pre.8，支持 2022.3）**，
+> 取代原 shiguredo/webrtc-build + 自写 C wrapper + P/Invoke + NDK 方案。
+> com.unity.webrtc 自带 libwebrtc（含 Android arm64）与 C# API（`RTCPeerConnection`/`VideoStreamTrack`），
+> **无需自写原生插件**；接收帧以 `Texture`（GPU）形式给出 → 直接喂穹顶 shader。信令仍自备（`ISignaling`）。
+> 原生 wrapper/interop 相关内容（下文 shiguredo 部分）作废；native/ 与 WebRtcInterop 留作历史/删除。
+
 ## Context（背景 / 为什么）
 现有 `FisheyeDomeXRLive` 用**本机 PICO VST 相机**（`VstCameraDomeFeeder`）把 SBS 鱼眼投到穹顶。下一步需要接收**远端机器人双目鱼眼相机**画面，经 WebRTC 实时传输，在 PICO 上以相同的鱼眼穹顶 + 云台方案显示（遥操作场景）。
 
@@ -25,14 +31,13 @@
 
 ## 方案（推荐）
 
-### 分层
-1. **原生 C wrapper（`extern "C"`）** — `Exp-WebRTC/Plugins/`
-   - 基于 shiguredo/webrtc-build，封装最小 C API：`wrtc_create/close`、SDP/candidate 收发钩子、注册视频帧回调。
-   - 帧回调内用 **libyuv** 把 I420→RGBA（SBS 2560×720），把 RGBA 指针+尺寸+时间戳交给 C#（原生线程）。
-   - 产物：`libwebrtc.so` + `libpicowebrtc.so`（wrapper），arm64-v8a；PC 联调可另出 windows x86_64 版（首版可只做其一）。
-
-2. **P/Invoke 绑定（纯 C#）** — `Exp-WebRTC/Scripts/Native/WebRtcInterop.cs`
-   - `[DllImport("picowebrtc")]`；帧回调用 `MonoPInvokeCallback`（AOT/IL2CPP 安全）；回调在原生线程**只做纯 C#**（Marshal.Copy），遵守"原生线程禁 JNI/Unity API"（照 `VstCamera` 纪律）。
+### 分层（改版：com.unity.webrtc）
+1. **WebRTC = Unity 官方 `com.unity.webrtc`（3.0.0-pre.8）** — 包依赖，无自写原生代码
+   - `RTCPeerConnection`（接收端 recvonly video）建连；`VideoStreamTrack.OnVideoReceived(Texture)`
+     直接给出解码后的 GPU `Texture`（包内完成解码+上传，含 Android arm64）。
+   - 帧以 `Texture` 交付 → 直接作穹顶 shader 的 `leftTex/rightTex`（SBS UV 分半），**免 byte 双缓冲/LoadRawTextureData**。
+   - 需每帧驱动 `WebRTC.Update()` 协程；用 `Unity.WebRTC` C# API，无 P/Invoke。
+   - `Exp-WebRTC/Scripts/UnityWebRtcVideoSource.cs`：封装 peer + track + 信令 → 暴露 `Texture Frame`。
 
 3. **信令客户端（可换抽象）** — `Exp-WebRTC/Scripts/Signaling/`
    - `ISignaling`（offer/answer/candidate 收发）；首版 `WebSocketSignaling`（自定义 JSON），预留 `HttpSignaling`。

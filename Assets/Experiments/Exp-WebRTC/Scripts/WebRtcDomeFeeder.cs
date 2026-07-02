@@ -18,10 +18,13 @@ namespace PicoTest.Experiments.WebRTC
         [Header("标定（左右各一）")]
         public FisheyeCalibration leftCalibration, rightCalibration;
         [Header("穹顶覆盖角 / 半径")]
-        public float coverageDeg = 146f;   // 精确贴合相机水平真实 FOV(标定反解 ~145-151°；>此为空区拉花)
+        public float coverageDeg = 104f;   // 收成竖直内容能填满的圆(竖直真实FOV~104°)：边界纯圆凸弧、无底部凹坑
         public float radius = 20f;
-        [Tooltip("边缘羽化角(度)：低头等越过穹顶边缘时，硬边圆弧柔化渐隐到透视")]
+        [Tooltip("边缘羽化角(度)：穹顶圆边缘 alpha 渐隐，柔化过渡到透视")]
         public float edgeFeatherDeg = 12f;
+        [Tooltip("底部水平截断仰角(度)：-90=关(收圆后不需要)")]
+        public float bottomCutoffDeg = -90f;
+        public float bottomFeatherDeg = 0f;
         [Header("画面朝向（WebRTC 视频纹理：flipV=0 正立；编辑器 VideoPlayer 验证）")]
         [Range(0, 1)] public float flipV = 0f;
         [Range(0, 1)] public float mirror = 0f;
@@ -73,6 +76,8 @@ namespace PicoTest.Experiments.WebRTC
             _dome.mirror = mirror;
             _dome.coverageDeg = coverageDeg; _dome.radius = radius; _dome.segments = 64;
             _dome.edgeFeatherDeg = edgeFeatherDeg;
+            _dome.bottomCutoffDeg = bottomCutoffDeg;
+            _dome.bottomFeatherDeg = bottomFeatherDeg;
             _dome.Initialize();
             _dome.PushParameters();   // 纹理到来后再 push 一次
 

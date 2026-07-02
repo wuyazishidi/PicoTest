@@ -7,6 +7,8 @@ Shader "PicoTest/FisheyeDome"
         _ThetaMax ("Theta Max (rad)", Float) = 1.91986
         _EdgeFeather ("Edge Feather (rad)", Float) = 0
         _BoundsFeather ("Bounds Feather (uv)", Float) = 0
+        _BottomCut ("Bottom Cut (sin elev)", Float) = -1
+        _BottomFeat ("Bottom Feather (sin)", Float) = 0
         _FlipV ("Flip V", Float) = 0
         _Mirror ("Mirror U", Float) = 0
     }
@@ -32,7 +34,7 @@ Shader "PicoTest/FisheyeDome"
             float4x4 _LeftRot, _RightRot;       // 3x3 置于左上
             float4 _ImgSize;                    // xy = (w,h)
             float4 _LeftUVRect, _RightUVRect;   // 眼图 [0,1] → 图集子区: uv*zw + xy（SBS 分半）
-            float _ThetaMax, _EdgeFeather, _BoundsFeather, _FlipV, _Mirror;
+            float _ThetaMax, _EdgeFeather, _BoundsFeather, _BottomCut, _BottomFeat, _FlipV, _Mirror;
             TEXTURE2D(_LeftTex);  SAMPLER(sampler_LeftTex);
             TEXTURE2D(_RightTex); SAMPLER(sampler_RightTex);
 
@@ -99,7 +101,11 @@ Shader "PicoTest/FisheyeDome"
                 float2 dEdge = min(uvEye, 1.0 - uvEye);          // 到最近边界距离（<0 即出界）
                 float md = min(dEdge.x, dEdge.y);
                 half aBounds = (_BoundsFeather > 1e-5) ? (half)saturate(md / _BoundsFeather) : (half)step(0.0, md);
-                col.a = min(aTheta, aBounds);                    // 两者取严：内部不透明(盖透视)，边缘/出界渐隐
+                // (c) 底部水平截断：按世界仰角(dirOS.y≈sin仰角)在 _BottomCut 以下淡出到透视，
+                //     把"中间上凹的坑"压平成一条水平边界线（纬线）
+                float elev = normalize(i.dirOS).y;
+                half aBottom = (_BottomFeat > 1e-5) ? (half)saturate((elev - _BottomCut) / _BottomFeat) : 1.0h;
+                col.a = min(min(aTheta, aBounds), aBottom);      // 取严：内部不透明(盖透视)，边缘/出界/底部渐隐
                 return col;
             }
             ENDHLSL

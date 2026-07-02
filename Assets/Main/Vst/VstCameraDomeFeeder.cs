@@ -23,10 +23,14 @@ namespace PicoTest.Vst
         [Header("分辨率 / fps")]
         public int width = 2560, height = 960, fps = 30;
         [Header("穹顶覆盖角 / 半径")]
-        public float coverageDeg = 146f;   // 精确贴合相机水平真实 FOV(标定反解 ~145-151°；>此为空区拉花)
+        public float coverageDeg = 104f;   // 收成竖直内容能填满的圆(竖直真实FOV~104°)：边界纯圆凸弧、无底部凹坑
+                                           // (相机水平~150°但竖直被画幅裁到~104°；取小的成对称圆，避免宽扁内容在底部形成凹陷)
         public float radius = 20f;
-        [Tooltip("边缘羽化角(度)：低头等越过穹顶边缘时，硬边圆弧柔化渐隐到透视")]
+        [Tooltip("边缘羽化角(度)：穹顶圆边缘 alpha 渐隐，柔化过渡到透视")]
         public float edgeFeatherDeg = 12f;
+        [Tooltip("底部水平截断仰角(度)：-90=关(收圆后不需要)")]
+        public float bottomCutoffDeg = -90f;
+        public float bottomFeatherDeg = 0f;
         [Header("低速云台伺服（混合转向慢分量：转头超死区才低速插值回中）")]
         public bool enableGazeServo = true;
         public float servoRateDegPerSec = 30f;   // 跟随速度（度/秒）
@@ -81,6 +85,8 @@ namespace PicoTest.Vst
             _dome.flipV = 1f;   // 相机缓冲 top-down，Unity 纹理 bottom-left → 翻 v
             _dome.coverageDeg = coverageDeg; _dome.radius = radius; _dome.segments = 64;
             _dome.edgeFeatherDeg = edgeFeatherDeg;
+            _dome.bottomCutoffDeg = bottomCutoffDeg;
+            _dome.bottomFeatherDeg = bottomFeatherDeg;
             _dome.Initialize();
             _dome.PushParameters();
 

@@ -23,6 +23,9 @@ namespace PicoTest.Rendering
         public float edgeFeatherDeg = 0f;
         [Tooltip("图像边界羽化(uv)：采样超出眼图[0,1](如竖直被画幅裁切区)→透明并羽化，避免硬黑带；0=硬切")]
         public float boundsFeatherUV = 0.03f;
+        [Tooltip("底部水平截断仰角(度)：低于此仰角(如-50)淡出到透视，把下方'上凹的坑'压平成水平边界；-90=不截")]
+        public float bottomCutoffDeg = -90f;
+        public float bottomFeatherDeg = 0f;
         [Range(0, 1)] public float flipV = 0, mirror = 0;
         public Shader domeShader; // 指 PicoTest/FisheyeDome；空则 Shader.Find
 
@@ -60,6 +63,10 @@ namespace PicoTest.Rendering
             _mpb.SetFloat("_ThetaMax", thetaMax);
             _mpb.SetFloat("_EdgeFeather", Mathf.Deg2Rad * edgeFeatherDeg);
             _mpb.SetFloat("_BoundsFeather", boundsFeatherUV);
+            float botCut = Mathf.Sin(Mathf.Deg2Rad * bottomCutoffDeg);
+            float botTop = Mathf.Sin(Mathf.Deg2Rad * (bottomCutoffDeg + bottomFeatherDeg));
+            _mpb.SetFloat("_BottomCut", botCut);
+            _mpb.SetFloat("_BottomFeat", Mathf.Max(0f, botTop - botCut));
             _mpb.SetFloat("_FlipV", flipV);
             _mpb.SetFloat("_Mirror", mirror);
 

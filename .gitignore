@@ -92,3 +92,10 @@ Assets/StreamingAssets/sbs_frame.png.meta
 
 # Unity Burst 调试产物(构建生成,勿提交)
 *_BurstDebugInformation_DoNotShip/
+
+# WebRTC 测试媒体/产物(勿入库)
+Assets/Experiments/Exp-WebRTC/Server/*.mp4
+Assets/Experiments/Exp-WebRTC/Server/*.mp4.meta
+Assets/StreamingAssets/sbs_frame.png
+Assets/StreamingAssets/sbs_frame.png.meta
+/Artifacts/

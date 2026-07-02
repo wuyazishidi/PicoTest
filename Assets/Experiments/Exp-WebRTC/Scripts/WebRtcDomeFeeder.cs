@@ -20,6 +20,9 @@ namespace PicoTest.Experiments.WebRTC
         [Header("穹顶覆盖角 / 半径")]
         public float coverageDeg = 150f;
         public float radius = 20f;
+        [Header("画面朝向（WebRTC 视频纹理：flipV=0 正立；编辑器 VideoPlayer 验证）")]
+        [Range(0, 1)] public float flipV = 0f;
+        [Range(0, 1)] public float mirror = 0f;
         [Header("低速云台伺服（两级迟滞，同 FisheyeDomeXRLive）")]
         public bool enableGazeServo = true;
         public float servoRateDegPerSec = 30f;
@@ -64,7 +67,8 @@ namespace PicoTest.Experiments.WebRTC
             _dome.rightCalibration = rightCalibration;
             _dome.leftUVRect = new Vector4(0f, 0f, 0.5f, 1f);    // SBS 左半 → 左眼
             _dome.rightUVRect = new Vector4(0.5f, 0f, 0.5f, 1f); // SBS 右半 → 右眼
-            _dome.flipV = 1f;
+            _dome.flipV = flipV;      // WebRTC 视频纹理正立 → 0（编辑器 VideoPlayer 验证；PICO 相机 buffer 才需 1）
+            _dome.mirror = mirror;
             _dome.coverageDeg = coverageDeg; _dome.radius = radius; _dome.segments = 64;
             _dome.Initialize();
             _dome.PushParameters();   // 纹理到来后再 push 一次

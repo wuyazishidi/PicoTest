@@ -30,8 +30,8 @@ namespace PicoTest.Experiments.WebRTC
         public bool quitOnButtonB = true;
         public float quitDelaySec = 5f;
         [Header("视频源")]
-        public bool useRealWebRtc = false;                 // false=假帧源(编辑器冒烟); true=com.unity.webrtc
-        public string signalingUrl = "ws://127.0.0.1:8765";
+        public bool useRealWebRtc = true;                  // false=假帧源(编辑器冒烟); true=com.unity.webrtc
+        public string signalingUrl = "ws://172.16.3.95:8765";  // PC 局域网 IP（PICO 经 LAN 连信令）
 
         /// <summary>外部注入的视频源；为空则按 useRealWebRtc 自建。</summary>
         public IWebRtcVideoSource Source { get; set; }

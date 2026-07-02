@@ -43,8 +43,9 @@ namespace PicoTest.Experiments.WebRTC.Tests
             var left = Cal(585.61f, 579.22f, 631.05f, 482.05f, -0.1470f, 0.4471f, -1.2333f, 1.4042f, -0.7284f, 0.1433f);
             var right = Cal(582.20f, 575.61f, 634.43f, 485.29f, -0.1427f, 0.4120f, -1.1371f, 1.2843f, -0.6592f, 0.1282f);
 
-            yield return RenderDump(src.Frame, left, right, 0f, 100f, 40f, 110f, 12f, -90f, "webrtc_dome_cov110.png");   // 下俯40°，覆盖110（圆形边界）
-            yield return RenderDump(src.Frame, left, right, 0f, 100f, 40f, 130f, 12f, -90f, "webrtc_dome_cov130.png");   // 下俯40°，覆盖130（对比）
+            // 水平不动(146)，仅垂直仰角截断-42°：看不同俯角下底部形状
+            yield return RenderDump(src.Frame, left, right, 0f, 100f, 0f, 146f, 12f, -42f, "webrtc_dome_vcut_p0.png");    // 平视
+            yield return RenderDump(src.Frame, left, right, 0f, 100f, 30f, 146f, 12f, -42f, "webrtc_dome_vcut_p30.png");  // 下俯30°
 
             src.Stop();
             Assert.Pass("已出图 Artifacts/webrtc_dome_flip0.png 与 _flip1.png");

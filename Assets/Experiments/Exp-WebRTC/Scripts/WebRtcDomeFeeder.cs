@@ -18,13 +18,13 @@ namespace PicoTest.Experiments.WebRTC
         [Header("标定（左右各一）")]
         public FisheyeCalibration leftCalibration, rightCalibration;
         [Header("穹顶覆盖角 / 半径")]
-        public float coverageDeg = 104f;   // 收成竖直内容能填满的圆(竖直真实FOV~104°)：边界纯圆凸弧、无底部凹坑
+        public float coverageDeg = 146f;   // 水平尽量保留(相机水平真实FOV~146-151°)；垂直单独用 bottomCutoff 处理
         public float radius = 20f;
         [Tooltip("边缘羽化角(度)：穹顶圆边缘 alpha 渐隐，柔化过渡到透视")]
         public float edgeFeatherDeg = 12f;
-        [Tooltip("底部水平截断仰角(度)：-90=关(收圆后不需要)")]
-        public float bottomCutoffDeg = -90f;
-        public float bottomFeatherDeg = 0f;
+        [Tooltip("底部垂直仰角截断(度)：对齐相机竖直真实FOV(~-52°)平滑淡出到透视；匹配FOV不拉伸，水平不受影响。-90=关")]
+        public float bottomCutoffDeg = -50f;
+        public float bottomFeatherDeg = 12f;
         [Header("画面朝向（WebRTC 视频纹理：flipV=0 正立；编辑器 VideoPlayer 验证）")]
         [Range(0, 1)] public float flipV = 0f;
         [Range(0, 1)] public float mirror = 0f;

@@ -5,6 +5,7 @@ Shader "PicoTest/FisheyeDome"
         _LeftTex ("Left Eye", 2D) = "black" {}
         _RightTex ("Right Eye", 2D) = "black" {}
         _ThetaMax ("Theta Max (rad)", Float) = 1.91986
+        _EdgeFeather ("Edge Feather (rad)", Float) = 0
         _FlipV ("Flip V", Float) = 0
         _Mirror ("Mirror U", Float) = 0
     }
@@ -30,7 +31,7 @@ Shader "PicoTest/FisheyeDome"
             float4x4 _LeftRot, _RightRot;       // 3x3 置于左上
             float4 _ImgSize;                    // xy = (w,h)
             float4 _LeftUVRect, _RightUVRect;   // 眼图 [0,1] → 图集子区: uv*zw + xy（SBS 分半）
-            float _ThetaMax, _FlipV, _Mirror;
+            float _ThetaMax, _EdgeFeather, _FlipV, _Mirror;
             TEXTURE2D(_LeftTex);  SAMPLER(sampler_LeftTex);
             TEXTURE2D(_RightTex); SAMPLER(sampler_RightTex);
 
@@ -57,11 +58,12 @@ Shader "PicoTest/FisheyeDome"
             }
 
             // === 与 FisheyeProjection.ProjectDirection 逐行一致（径向 k1..k6，Horner） ===
-            float2 ProjectUV(float3 d, float4 intrin, float4 k, float4 k2c, float4x4 R, out bool inFov)
+            float2 ProjectUV(float3 d, float4 intrin, float4 k, float4 k2c, float4x4 R, out bool inFov, out float thetaOut)
             {
                 float3 c = mul((float3x3)R, d);
                 float rxy = length(c.xy);
                 float theta = atan2(rxy, c.z);
+                thetaOut = theta;
                 inFov = theta <= _ThetaMax;
                 float t2 = theta * theta;
                 float thetaD = theta * (1 + t2*(k.x + t2*(k.y + t2*(k.z + t2*(k.w + t2*(k2c.x + t2*k2c.y))))));
@@ -78,10 +80,10 @@ Shader "PicoTest/FisheyeDome"
             {
                 UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i);
                 bool isRight = unity_StereoEyeIndex == 1;
-                bool inFov;
+                bool inFov; float theta;
                 float2 uv = isRight
-                    ? ProjectUV(i.dirOS, _RightIntrin, _RightDist, _RightDist2, _RightRot, inFov)
-                    : ProjectUV(i.dirOS, _LeftIntrin,  _LeftDist,  _LeftDist2,  _LeftRot,  inFov);
+                    ? ProjectUV(i.dirOS, _RightIntrin, _RightDist, _RightDist2, _RightRot, inFov, theta)
+                    : ProjectUV(i.dirOS, _LeftIntrin,  _LeftDist,  _LeftDist2,  _LeftRot,  inFov, theta);
                 if (!inFov) return half4(0, 0, 0, 0);            // 超 FOV → 透明，露出系统透视(外界)
                 // 眼图 [0,1] → 图集子区（SBS：左半/右半）
                 float4 rect = isRight ? _RightUVRect : _LeftUVRect;
@@ -89,7 +91,9 @@ Shader "PicoTest/FisheyeDome"
                 half4 col = isRight
                     ? SAMPLE_TEXTURE2D(_RightTex, sampler_RightTex, uv)
                     : SAMPLE_TEXTURE2D(_LeftTex,  sampler_LeftTex,  uv);
-                col.a = 1;                                       // 有画面处不透明，盖住透视
+                // 边缘羽化：最后 _EdgeFeather 弧度内 alpha 1→0，硬边圆弧变柔和过渡到透视
+                half edge = (_EdgeFeather > 1e-4) ? (half)saturate((_ThetaMax - theta) / _EdgeFeather) : 1.0h;
+                col.a = edge;                                    // 有画面处不透明(盖透视)，边缘渐隐
                 return col;
             }
             ENDHLSL

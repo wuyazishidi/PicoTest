@@ -19,6 +19,8 @@ namespace PicoTest.Rendering
         public Vector4 rightUVRect = new Vector4(0, 0, 1, 1);
         [Header("WorldLocked 锚点")] public Transform robotHeadAnchor;
         [Header("穹顶")] public float coverageDeg = 220f; public int segments = 48; public float radius = 20f;
+        [Tooltip("边缘羽化角(度)：最后这几度 alpha 渐隐，硬边圆弧柔化过渡到透视；0=硬切")]
+        public float edgeFeatherDeg = 0f;
         [Range(0, 1)] public float flipV = 0, mirror = 0;
         public Shader domeShader; // 指 PicoTest/FisheyeDome；空则 Shader.Find
 
@@ -54,6 +56,7 @@ namespace PicoTest.Rendering
             _mpb.SetVector("_LeftUVRect", leftUVRect);
             _mpb.SetVector("_RightUVRect", rightUVRect);
             _mpb.SetFloat("_ThetaMax", thetaMax);
+            _mpb.SetFloat("_EdgeFeather", Mathf.Deg2Rad * edgeFeatherDeg);
             _mpb.SetFloat("_FlipV", flipV);
             _mpb.SetFloat("_Mirror", mirror);
 

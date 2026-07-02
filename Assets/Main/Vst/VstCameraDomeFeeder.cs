@@ -25,6 +25,8 @@ namespace PicoTest.Vst
         [Header("穹顶覆盖角 / 半径")]
         public float coverageDeg = 150f;
         public float radius = 20f;
+        [Tooltip("边缘羽化角(度)：低头等越过穹顶边缘时，硬边圆弧柔化渐隐到透视")]
+        public float edgeFeatherDeg = 12f;
         [Header("低速云台伺服（混合转向慢分量：转头超死区才低速插值回中）")]
         public bool enableGazeServo = true;
         public float servoRateDegPerSec = 30f;   // 跟随速度（度/秒）
@@ -78,6 +80,7 @@ namespace PicoTest.Vst
             _dome.rightUVRect = new Vector4(0.5f, 0f, 0.5f, 1f); // SBS 右半 → 右眼
             _dome.flipV = 1f;   // 相机缓冲 top-down，Unity 纹理 bottom-left → 翻 v
             _dome.coverageDeg = coverageDeg; _dome.radius = radius; _dome.segments = 64;
+            _dome.edgeFeatherDeg = edgeFeatherDeg;
             _dome.Initialize();
             _dome.PushParameters();
 

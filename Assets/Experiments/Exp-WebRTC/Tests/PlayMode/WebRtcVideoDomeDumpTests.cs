@@ -43,20 +43,20 @@ namespace PicoTest.Experiments.WebRTC.Tests
             var left = Cal(585.61f, 579.22f, 631.05f, 482.05f, -0.1470f, 0.4471f, -1.2333f, 1.4042f, -0.7284f, 0.1433f);
             var right = Cal(582.20f, 575.61f, 634.43f, 485.29f, -0.1427f, 0.4120f, -1.1371f, 1.2843f, -0.6592f, 0.1282f);
 
-            yield return RenderDump(src.Frame, left, right, 0f, "webrtc_dome_flip0.png");
-            yield return RenderDump(src.Frame, left, right, 1f, "webrtc_dome_flip1.png");
+            yield return RenderDump(src.Frame, left, right, 0f, 100f, 40f, 150f, 0f, "webrtc_dome_down150.png");     // 下俯40°，硬边（复现弧）
+            yield return RenderDump(src.Frame, left, right, 0f, 100f, 40f, 150f, 12f, "webrtc_dome_feather.png");   // 下俯40°，羽化12°（柔化）
 
             src.Stop();
             Assert.Pass("已出图 Artifacts/webrtc_dome_flip0.png 与 _flip1.png");
         }
 
-        private IEnumerator RenderDump(Texture tex, FisheyeCalibration l, FisheyeCalibration r, float flipV, string name)
+        private IEnumerator RenderDump(Texture tex, FisheyeCalibration l, FisheyeCalibration r, float flipV, float fov, float pitchDeg, float coverageDeg, float featherDeg, string name)
         {
             var rig = new GameObject("rig");
             var cam = rig.AddComponent<Camera>();
-            cam.transform.position = Vector3.zero; cam.transform.rotation = Quaternion.identity;
-            cam.clearFlags = CameraClearFlags.SolidColor; cam.backgroundColor = Color.black;
-            cam.fieldOfView = 70f; cam.nearClipPlane = 0.05f; cam.farClipPlane = 100f;
+            cam.transform.position = Vector3.zero; cam.transform.rotation = Quaternion.Euler(pitchDeg, 0f, 0f); // +pitch=下俯
+            cam.clearFlags = CameraClearFlags.SolidColor; cam.backgroundColor = new Color(0.1f, 0.1f, 0.12f, 1f); // 深灰底：区分穹顶外
+            cam.fieldOfView = fov; cam.nearClipPlane = 0.05f; cam.farClipPlane = 100f;
             var rt = new RenderTexture(1024, 1024, 16);
 
             var ro = new GameObject("domeR");
@@ -66,7 +66,8 @@ namespace PicoTest.Experiments.WebRTC.Tests
             dome.leftUVRect = new Vector4(0f, 0f, 0.5f, 1f);
             dome.rightUVRect = new Vector4(0.5f, 0f, 0.5f, 1f);
             dome.flipV = flipV;
-            dome.coverageDeg = 150f; dome.radius = 10f; dome.segments = 64;
+            dome.coverageDeg = coverageDeg; dome.radius = 10f; dome.segments = 64;
+            dome.edgeFeatherDeg = featherDeg;
             dome.Initialize(); dome.PushParameters();
             yield return null;
 

@@ -29,5 +29,12 @@
 - **M1 spatial mesh 未真机验**：射线投射逻辑编辑器可跑（无网格→回退），真机需接 PICO 空间网格并生成 MeshCollider（或 PXR_SpatialMeshManager）。
 - **分支基座**：基于 M0（旧 fisheye-stereo-dome + M0），非远端最新整合；仅单独取了重标定资产。与远端云台/透视方案并行，未来若合并需对齐方向。
 
+## 追加：M2 立体深度核心（确定性部分）
+- `Assets/Main/Core/Rendering/StereoDepth.cs`：校正空间 视差→深度→3D 点（`z=fx·B/d`、`PointFromDisparity`），纯 Core 可测。用真机值 K_rectified.fx≈371.4 / 基线 0.064m。
+- `StereoDepthTests.cs`（6 测）：深度公式、单调性、无效视差守护、主点/偏轴反投影。
+- 定位：完整 M2 = raw 鱼眼→去畸变到 pinhole（GPU remap）→极线立体匹配得视差（GPU，重活/设备门）→本类换 3D 点/深度（确定性，已测）→外参转头系→喂深度面。**GPU 匹配与鱼眼校正重采样仍是设备+性能门。**
+- M1 现状：`SpatialMeshDepthSurface` 已能消费任意层的 MeshCollider；PICO 有现成 `PXR_SpatialMeshManager`（生成带 MeshCollider 的网格 GO + MeshAdded 事件）→ M1 剩场景配置（加管理器+设层），属设备门，非编辑器可验代码。
+- EditMode：77 passed / 0（+6）。
+
 ## 下一步
-真机验 M0 常量深度（远景+转头）→ 接 PICO spatial mesh 验 M1 近景视差。
+真机验 M0 常量深度（远景+转头）→ 配 PICO spatial mesh 验 M1 近景视差 → M2 接 GPU 立体匹配产视差喂 StereoDepth。

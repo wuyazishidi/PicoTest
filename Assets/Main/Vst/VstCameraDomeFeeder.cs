@@ -22,11 +22,14 @@ namespace PicoTest.Vst
         [Header("穹顶覆盖角 / 半径")]
         public float coverageDeg = 160f;
         public float radius = 20f;
+        [Header("实时自视角=HeadLocked（穹顶跟头位置+朝向）；遥操作远端固定头才用 WorldLocked")]
+        public bool headLocked = true;
 
         private FisheyeDomeRenderer _dome;
         private Transform _anchor;
         private Camera _xrCam;
         private Texture2D _tex;
+        private bool _extrinsicsApplied;
 
         // 双缓冲：原生线程写 _back，主线程读 _front
         private byte[] _front, _back;
@@ -95,7 +98,18 @@ namespace PicoTest.Vst
                 _tex.Apply(updateMipmaps: false, makeNoLongerReadable: false);
             }
 
-            // 穹顶跟头位置（罩住眼点），不跟头转 → 转头在静止穹顶内环顾
+            // 拿到真实相机外参后喂入标定（替换 identity），只做一次并重推参数
+            if (!_extrinsicsApplied && VstCamera.ExtrinsicsValid)
+            {
+                // eyePosInHead=0：M0 用头/眼中心近似（主视差=相机前伸偏移，已被平移捕获）
+                leftCalibration.SetFromSdkExtrinsics(VstCamera.LeftExtrinsics, Vector3.zero);
+                rightCalibration.SetFromSdkExtrinsics(VstCamera.RightExtrinsics, Vector3.zero);
+                _dome.PushParameters();
+                _extrinsicsApplied = true;
+                Debug.Log($"[VstFeeder] 外参已应用 L.t={leftCalibration.extrinsicTranslation} R.t={rightCalibration.extrinsicTranslation}");
+            }
+
+            // HeadLocked：穹顶跟头位置+朝向 → 相机像素恒定映射到头相对方向（实时自视角必需）
             if (_xrCam == null)
             {
                 _xrCam = Camera.main;
@@ -106,7 +120,10 @@ namespace PicoTest.Vst
                 }
             }
             if (_xrCam != null && _anchor != null)
+            {
                 _anchor.position = _xrCam.transform.position;
+                _anchor.rotation = headLocked ? _xrCam.transform.rotation : Quaternion.identity;
+            }
         }
 
         private void OnApplicationPause(bool paused)

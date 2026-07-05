@@ -13,6 +13,19 @@ namespace PicoTest.Rendering
         public float k1, k2, k3, k4, k5, k6;
         [Header("图像尺寸")] public int width = 1600, height = 1600;
         [Header("外参：相机→机器人头 旋转")] public Quaternion extrinsicRotation = Quaternion.identity;
+        [Header("外参：相机光心相对眼睛的平移 (m，眼→相机)")] public Vector3 extrinsicTranslation = Vector3.zero;
+
+        /// <summary>
+        /// 用 PICO SDK 的相机外参 4×4（GetCameraExtrinsicsfor4U 的一只眼）装配旋转+平移。
+        /// eyeToHead：眼睛相对头/参考系的位姿（XR 眼锚点）；相机相对眼睛平移 = C_head − E_head。
+        /// 手性/基准以真机核对为准（PICO Unity 插件多已在 Unity 左手系；此处不额外翻转）。
+        /// </summary>
+        public void SetFromSdkExtrinsics(Matrix4x4 cameraToHead, Vector3 eyePosInHead)
+        {
+            extrinsicRotation = cameraToHead.rotation;
+            Vector3 camPosInHead = cameraToHead.GetColumn(3);
+            extrinsicTranslation = camPosInHead - eyePosInHead; // 眼→相机
+        }
 
         /// <summary>转 Core 纯数学结构。R_eye 行主序由四元数矩阵展开（M.MultiplyVector(v)==q*v）。</summary>
         public FisheyeProjection ToProjection(double thetaMaxRad)

@@ -53,6 +53,12 @@ namespace PicoTest.Rendering
             _mpb.SetVector("_ImgSize", new Vector4(leftCalibration.width, leftCalibration.height, 0, 0));
             _mpb.SetVector("_LeftUVRect", leftUVRect);
             _mpb.SetVector("_RightUVRect", rightUVRect);
+            // 视点重投影：每眼相机光心相对眼睛的平移 + 常量深度(=半径)。
+            // camOffset=0 且大半径时退化为纯方向采样（= 无穷远穹顶，M0 默认行为）。
+            // M1 起把 _Radius 换成逐顶点真实深度即得视差 → seethrough 效果。
+            _mpb.SetVector("_LeftCamOffset", leftCalibration.extrinsicTranslation);
+            _mpb.SetVector("_RightCamOffset", rightCalibration.extrinsicTranslation);
+            _mpb.SetFloat("_Radius", radius);
             _mpb.SetFloat("_ThetaMax", thetaMax);
             _mpb.SetFloat("_FlipV", flipV);
             _mpb.SetFloat("_Mirror", mirror);

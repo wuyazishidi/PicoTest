@@ -30,7 +30,9 @@ Shader "PicoTest/FisheyeDome"
             float4x4 _LeftRot, _RightRot;       // 3x3 置于左上
             float4 _ImgSize;                    // xy = (w,h)
             float4 _LeftUVRect, _RightUVRect;   // 眼图 [0,1] → 图集子区: uv*zw + xy（SBS 分半）
+            float4 _LeftCamOffset, _RightCamOffset; // 眼→相机光心平移 t (m)，xyz
             float _ThetaMax, _FlipV, _Mirror;
+            float _Radius;                      // 常量深度(m)；M1 起可换逐像素深度
             TEXTURE2D(_LeftTex);  SAMPLER(sampler_LeftTex);
             TEXTURE2D(_RightTex); SAMPLER(sampler_RightTex);
 
@@ -56,6 +58,14 @@ Shader "PicoTest/FisheyeDome"
                 return o;
             }
 
+            // === 视点重投影：与 EyeReprojection.CameraRayForEyeRay 逐行一致 ===
+            // 眼视线 dirHat + 常量深度 _Radius + 眼→相机平移 camOff → 相机采样方向 (P−C)。
+            float3 CameraRay(float3 dirOS, float3 camOff)
+            {
+                float3 h = normalize(dirOS);
+                return h * _Radius - camOff;      // depth·eHat − t
+            }
+
             // === 与 FisheyeProjection.ProjectDirection 逐行一致（径向 k1..k6，Horner） ===
             float2 ProjectUV(float3 d, float4 intrin, float4 k, float4 k2c, float4x4 R, out bool inFov)
             {
@@ -79,9 +89,11 @@ Shader "PicoTest/FisheyeDome"
                 UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i);
                 bool isRight = unity_StereoEyeIndex == 1;
                 bool inFov;
+                float3 camOff = isRight ? _RightCamOffset.xyz : _LeftCamOffset.xyz;
+                float3 d = CameraRay(i.dirOS, camOff);   // 视点重投影
                 float2 uv = isRight
-                    ? ProjectUV(i.dirOS, _RightIntrin, _RightDist, _RightDist2, _RightRot, inFov)
-                    : ProjectUV(i.dirOS, _LeftIntrin,  _LeftDist,  _LeftDist2,  _LeftRot,  inFov);
+                    ? ProjectUV(d, _RightIntrin, _RightDist, _RightDist2, _RightRot, inFov)
+                    : ProjectUV(d, _LeftIntrin,  _LeftDist,  _LeftDist2,  _LeftRot,  inFov);
                 if (!inFov) return half4(0, 0, 0, 1);            // FOV 裁剪
                 // 眼图 [0,1] → 图集子区（SBS：左半/右半）
                 float4 rect = isRight ? _RightUVRect : _LeftUVRect;

@@ -20,6 +20,16 @@
 
 `ChunkWriter.FormatVersion`（chunk 文件容器格式）与 `CoreInfo.SchemaVersion`（帧内容 schema）相互独立，各自递增。容器格式升级（如头部字段变更）不影响帧内容版本；帧内 schema 演进（如新增骨骼字段）不触发容器版本升级。
 
+## 2026-07-05 | raw 自建 passthrough（复刻 seethrough）
+
+| 决策 | 理由 |
+|---|---|
+| 不调用系统 seethrough，用 raw 鱼眼自建透视 | 需「操作员所见 = 进入训练数据的内容」的可控管线；系统 seethrough 是黑盒、不出深度、不可复用到数据侧；全程 raw 采集还规避了与系统 seethrough 抢相机的共存冲突 |
+| 架构 = 固定半径穹顶升级为「深度面」 | seethrough 核心 = 逐像素深度 + 视点重投影；穹顶固定半径 = 深度∞ 退化。把 `_Radius` 常量换成逐像素深度即得视差，现有渲染栈不作废 |
+| 深度分阶段：M1 spatial mesh → M2 立体匹配 | PICO 不开放稠密深度（只给粗 mesh + 平面）；mesh 打底静态场景便宜稳，立体匹配补近景动态但 GPU 重 |
+| 实时自视角用 HeadLocked（区别遥操作 WorldLocked） | 相机随头转，采到的帧是头相对的；WorldLocked 用在实时头显会转头漂移 |
+| **承诺线：不承诺像素级完全一致** | 稠密深度不开放 = 硬边界；可达「远中景≈seethrough、近景静态对齐、近景动态接近」。详见 `Docs/designs/2026-07-05-raw-passthrough-reprojection.md` |
+
 ## 待决（需要外部输入）
 
 - 后端接口契约（OpenAPI）：后端是否已存在？不存在则 M2 交付最小接收服务

@@ -20,6 +20,8 @@ namespace PicoTest.Rendering
         [Header("穹顶覆盖角 / 半径")]
         public float coverageDeg = 160f;
         public float radius = 20f;
+        [Header("实时自视角=HeadLocked（跟头位置+朝向）；遥操作固定头才关")]
+        public bool headLocked = true;
 
         private FisheyeDomeRenderer _dome;
         private Transform _anchor;
@@ -75,7 +77,7 @@ namespace PicoTest.Rendering
 
         private void LateUpdate()
         {
-            // 穹顶跟头显位置（始终罩住眼点），但不跟头转 → 转头在静止穹顶内环顾
+            // HeadLocked：穹顶跟头位置+朝向（实时自视角）；关闭则退化为静止穹顶内环顾（遥操作）
             if (_xrCam == null)
             {
                 _xrCam = Camera.main;
@@ -87,7 +89,10 @@ namespace PicoTest.Rendering
                 }
             }
             if (_xrCam != null && _anchor != null)
+            {
                 _anchor.position = _xrCam.transform.position;
+                _anchor.rotation = headLocked ? _xrCam.transform.rotation : Quaternion.identity;
+            }
         }
     }
 }

@@ -12,16 +12,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c7c21a71c51517f45867dea0417af2c1, type: 3}
   m_Name: RealRight
   m_EditorClassIdentifier: 
-  fx: 583.7563
-  fy: 577.13947
-  cx: 635.3703
-  cy: 485.5457
-  k1: -0.13706751
-  k2: 0.38888538
-  k3: -1.0968277
-  k4: 1.2490488
-  k5: -0.64234954
-  k6: 0.12456253
+  fx: 582.20264
+  fy: 575.6109
+  cx: 634.4298
+  cy: 485.2908
+  k1: -0.14265534
+  k2: 0.41195035
+  k3: -1.1370828
+  k4: 1.2843088
+  k5: -0.6592375
+  k6: 0.12819569
   width: 1280
   height: 960
   extrinsicRotation: {x: 0, y: 0, z: 0, w: 1}

@@ -44,6 +44,9 @@ namespace PicoTest.Editor.Rendering
             feeder.rightCalibration = right;
             feeder.depthMode = RawReprojectionFeeder.DepthMode.Constant; // 首版 M0 常量深度
 
+            // 真机验证/调参：手柄实时切 flipV/mirror/外参符号/深度 + 状态日志（详见 Docs/testing）
+            rigGo.AddComponent<RawReprojectionDiagnostics>();
+
             EditorSceneManager.SaveScene(scene, ScenePath);
             EditorSceneManager.OpenScene(ScenePath);
             Debug.Log($"[RawReprojectionSceneBuilder] 已生成并打开 {ScenePath}。\n" +

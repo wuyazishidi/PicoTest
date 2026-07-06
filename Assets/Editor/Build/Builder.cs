@@ -148,22 +148,11 @@ namespace PicoTest.Editor.Build
         }
 
         /// <summary>
-        /// 装机：把 Build APK 菜单的产物 adb install 到 PICO 并启动（复用 Tools/install-latest-apk.ps1，
-        /// 含 adb 定位/多设备检查）。按 ENABLE_BODY_TRACKING 自动选 -bt 包，与构建菜单一一对应。
-        /// 放在 PicoTest/ 直下（与 Tracker IMU 子菜单同级），一键可点。
+        /// 装机：把最新构建的 APK adb install 到 PICO 并启动。复用 Tools/install-latest-apk.ps1
+        /// 默认行为（在 Builds\/Build\/项目根挑修改时间最新的 .apk；含 adb 定位/多设备检查）。
         /// </summary>
-        [MenuItem("PicoTest/Install Tracker IMU APK + Launch (adb)")]
-        public static void InstallTrackerImuApk()
-        {
-            string apkPath = Path.Combine(OutputDir, TrackerImuApkName());
-            if (!File.Exists(apkPath))
-            {
-                Debug.LogError($"[Builder] APK 不存在：{apkPath} —— 先跑 PicoTest/Tracker IMU/Build APK (in-editor)。" +
-                               "（注意体追开关状态决定包名是否带 -bt）");
-                return;
-            }
-            InstallApkViaScript(apkPath);
-        }
+        [MenuItem("PicoTest/Install Latest APK + Launch (adb)")]
+        public static void InstallLatestApk() => InstallApkViaScript(null);
 
         private static bool TrackerImuBtDefineOn()
         {
@@ -174,13 +163,15 @@ namespace PicoTest.Editor.Build
         private static string TrackerImuApkName()
             => TrackerImuBtDefineOn() ? "PicoTest-TrackerImu-bt.apk" : "PicoTest-TrackerImu.apk";
 
-        /// <summary>同步调用 Tools/install-latest-apk.ps1 -Launch 装机（阻塞编辑器 ~10-30s，输出转控制台）。</summary>
+        /// <summary>同步调用 Tools/install-latest-apk.ps1 -Launch 装机（阻塞编辑器 ~10-30s，输出转控制台）。
+        /// apkPath 为 null 时不传 -Path，走脚本默认的"最新 APK"搜索。</summary>
         private static void InstallApkViaScript(string apkPath)
         {
+            string pathArg = string.IsNullOrEmpty(apkPath) ? "" : $" -Path \"{apkPath}\"";
             var psi = new System.Diagnostics.ProcessStartInfo
             {
                 FileName = "powershell",
-                Arguments = $"-ExecutionPolicy Bypass -File Tools\\install-latest-apk.ps1 -Path \"{apkPath}\" -Launch",
+                Arguments = $"-ExecutionPolicy Bypass -File Tools\\install-latest-apk.ps1{pathArg} -Launch",
                 WorkingDirectory = Directory.GetCurrentDirectory(),
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
@@ -196,13 +187,13 @@ namespace PicoTest.Editor.Build
                     if (!p.WaitForExit(180_000))
                     {
                         try { p.Kill(); } catch { }
-                        Debug.LogError($"[Builder] 装机超时（180s）：{apkPath}\n{stdout}");
+                        Debug.LogError($"[Builder] 装机超时（180s）\n{stdout}");
                         return;
                     }
                     if (p.ExitCode == 0)
-                        Debug.Log($"[Builder] 装机成功并已启动：{apkPath}\n{stdout}");
+                        Debug.Log($"[Builder] 装机成功并已启动\n{stdout}");
                     else
-                        Debug.LogError($"[Builder] 装机失败（exit {p.ExitCode}）：{apkPath}\n{stdout}\n{stderr}");
+                        Debug.LogError($"[Builder] 装机失败（exit {p.ExitCode}）\n{stdout}\n{stderr}");
                 }
             }
             catch (Exception e)

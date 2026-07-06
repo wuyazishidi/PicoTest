@@ -1,0 +1,20 @@
+{
+    "name": "Experiment.TrackerIMU.Editor",
+    "rootNamespace": "PicoTest.Experiments.TrackerIMU.Editor",
+    "references": [
+        "Experiment.TrackerIMU",
+        "Main",
+        "Main.Core"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

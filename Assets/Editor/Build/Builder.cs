@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Linq;
 using UnityEditor;
+using UnityEditor.Build;
 using UnityEditor.Build.Reporting;
 using UnityEngine;
 
@@ -88,69 +89,65 @@ namespace PicoTest.Editor.Build
         }
 
         /// <summary>
-        /// 编辑器内构建 VST Live APK（不 Exit、不需 batchmode，与开着的编辑器共存）。
-        /// 菜单：PicoTest/Build VST Live (in-editor)。产物 Builds/PicoTest-VstLive.apk。
+        /// 编辑器内单场景 Release 构建共享入口（不 Exit、不需 batchmode，与开着的编辑器共存）。
+        /// Release（非 Development）：关闭 CheckJNI，避免 PICO 回调 binder 线程的 JNI 检查 abort；
+        /// Debug.Log 在 Release 下仍输出，诊断日志不受影响。
         /// </summary>
-        [MenuItem("PicoTest/Build VST Live (in-editor)")]
-        public static void BuildVstLiveTestInEditor()
+        private static void BuildSceneInEditor(string scenePath, string apkName)
         {
             try
             {
+                if (!File.Exists(scenePath))
+                {
+                    Debug.LogError($"[Builder] 场景不存在：{scenePath} —— 先跑对应的场景生成菜单。");
+                    return;
+                }
                 EnsureAndroidToolchain();
                 Directory.CreateDirectory(OutputDir);
-                string apkPath = Path.Combine(OutputDir, "PicoTest-VstLive.apk");
+                string apkPath = Path.Combine(OutputDir, apkName);
 
                 var options = new BuildPlayerOptions
                 {
-                    scenes = new[] { "Assets/Main/Scenes/FisheyeDomeXRLive.unity" },
+                    scenes = new[] { scenePath },
                     locationPathName = apkPath,
                     target = BuildTarget.Android,
-                    // Release（非 Development）：关闭 CheckJNI，避免 PICO 相机回调 binder 线程的 JNI 检查 abort。
-                    // Debug.Log 在 Release 下仍输出，[VST] 诊断日志不受影响。
                     options = BuildOptions.None,
                 };
 
                 BuildReport report = BuildPipeline.BuildPlayer(options);
                 BuildSummary summary = report.summary;
-                Debug.Log($"[Builder] InEditor VstLive(Release) result={summary.result} size={summary.totalSize} " +
+                Debug.Log($"[Builder] InEditor(Release) {apkName} result={summary.result} size={summary.totalSize} " +
                           $"time={summary.totalTime} errors={summary.totalErrors} output={apkPath}");
             }
             catch (Exception e)
             {
-                Debug.LogError($"[Builder] InEditor VstLive Exception: {e}");
+                Debug.LogError($"[Builder] InEditor {apkName} Exception: {e}");
             }
         }
 
-        /// <summary>
-        /// 编辑器内构建 WebRTC 双目鱼眼穹顶 APK（Exp-WebRTC 场景，Release）。
-        /// 菜单：PicoTest/Build WebRTC Dome (in-editor)。产物 Builds/PicoTest-WebRtc.apk。
-        /// </summary>
+        /// <summary>编辑器内构建 VST Live APK。产物 Builds/PicoTest-VstLive.apk。</summary>
+        [MenuItem("PicoTest/Build VST Live (in-editor)")]
+        public static void BuildVstLiveTestInEditor()
+            => BuildSceneInEditor("Assets/Main/Scenes/FisheyeDomeXRLive.unity", "PicoTest-VstLive.apk");
+
+        /// <summary>编辑器内构建 WebRTC 双目鱼眼穹顶 APK（Exp-WebRTC 场景）。产物 Builds/PicoTest-WebRtc.apk。</summary>
         [MenuItem("PicoTest/Build WebRTC Dome (in-editor)")]
         public static void BuildWebRtcInEditor()
+            => BuildSceneInEditor("Assets/Experiments/Exp-WebRTC/Scenes/WebRtcDomeXRLive.unity", "PicoTest-WebRtc.apk");
+
+        /// <summary>
+        /// 编辑器内构建多 Tracker IMU 测试 APK（Exp-TrackerIMU 场景）。
+        /// APK 名按 ENABLE_BODY_TRACKING（Android define，菜单 PicoTest/Tracker IMU 切）自动区分：
+        /// 关（R1/R2）→ PicoTest-TrackerImu.apk；开（R3 对照轮）→ PicoTest-TrackerImu-bt.apk。
+        /// </summary>
+        [MenuItem("PicoTest/Tracker IMU/Build APK (in-editor)")]
+        public static void BuildTrackerImuInEditor()
         {
-            try
-            {
-                EnsureAndroidToolchain();
-                Directory.CreateDirectory(OutputDir);
-                string apkPath = Path.Combine(OutputDir, "PicoTest-WebRtc.apk");
-
-                var options = new BuildPlayerOptions
-                {
-                    scenes = new[] { "Assets/Experiments/Exp-WebRTC/Scenes/WebRtcDomeXRLive.unity" },
-                    locationPathName = apkPath,
-                    target = BuildTarget.Android,
-                    options = BuildOptions.None,   // Release：关 CheckJNI
-                };
-
-                BuildReport report = BuildPipeline.BuildPlayer(options);
-                BuildSummary summary = report.summary;
-                Debug.Log($"[Builder] InEditor WebRtc(Release) result={summary.result} size={summary.totalSize} " +
-                          $"time={summary.totalTime} errors={summary.totalErrors} output={apkPath}");
-            }
-            catch (Exception e)
-            {
-                Debug.LogError($"[Builder] InEditor WebRtc Exception: {e}");
-            }
+            PlayerSettings.GetScriptingDefineSymbols(NamedBuildTarget.Android, out string[] defines);
+            bool bt = defines.Contains("ENABLE_BODY_TRACKING");
+            Debug.Log($"[Builder] TrackerImu 构建，ENABLE_BODY_TRACKING={(bt ? "开（R3 对照轮）" : "关（R1/R2）")}");
+            BuildSceneInEditor("Assets/Experiments/Exp-TrackerIMU/Scenes/TrackerImuTest.unity",
+                bt ? "PicoTest-TrackerImu-bt.apk" : "PicoTest-TrackerImu.apk");
         }
 
         public static void BuildPico()

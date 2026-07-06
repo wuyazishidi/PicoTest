@@ -15,7 +15,7 @@ namespace PicoTest.Experiments.TrackerIMU.Editor
         private const string ScenePath = "Assets/Experiments/Exp-TrackerIMU/Scenes/TrackerImuTest.unity";
         private const string BtDefine = "ENABLE_BODY_TRACKING";
 
-        [MenuItem("PicoTest/Tracker IMU/Build Test Scene")]
+        [MenuItem("PicoTest/Tracker IMU/Generate Test Scene")]
         public static void Build()
         {
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
@@ -34,7 +34,7 @@ namespace PicoTest.Experiments.TrackerIMU.Editor
             EditorSceneManager.OpenScene(ScenePath);
             Debug.Log($"[TrackerImuSceneBuilder] 已生成并打开 {ScenePath}。\n" +
                       $"当前体追编译开关 {BtDefine}={(HasBtDefine() ? "开" : "关")}（菜单 PicoTest/Tracker IMU 切换）。\n" +
-                      "真机流程见 Assets/Experiments/Exp-TrackerIMU/README.md（Release 构建，Development Build 有 CheckJNI 崩溃前科）。");
+                      "打包：菜单 PicoTest/Tracker IMU/Build APK (in-editor)；真机流程见 Assets/Experiments/Exp-TrackerIMU/README.md。");
         }
 
         [MenuItem("PicoTest/Tracker IMU/Enable Body Tracking Define")]

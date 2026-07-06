@@ -16,9 +16,9 @@
 
 ## 使用方法
 
-1. **生成场景**：菜单 `PicoTest/Tracker IMU/Build Test Scene` → `Scenes/TrackerImuTest.unity`
+1. **生成场景**：菜单 `PicoTest/Tracker IMU/Generate Test Scene` → `Scenes/TrackerImuTest.unity`（已入库，一般无需重新生成）
 2. **体追开关**：菜单 `PicoTest/Tracker IMU/Enable Body Tracking Define`（给 Android 加 `ENABLE_BODY_TRACKING`，默认关；R3 对照轮用）
-3. **构建**：Release 构建（Development Build 有 CheckJNI 崩溃前科），只含本场景
+3. **打包**：菜单 `PicoTest/Tracker IMU/Build APK (in-editor)` → `Builds/PicoTest-TrackerImu.apk`（体追开关打开时自动命名 `-bt` 后缀，防混包）。Release 构建（Development Build 有 CheckJNI 崩溃前科），只含本场景
 4. **真机轮次**（重启 App 换轮次，R2→R3 建议重启头显）：
    - R1：体追关 + round-robin，10min（前 5min 静置、后 5min 逐个晃动）→ P1+P2
    - R2：体追关 + 每帧全量，5min → P3

@@ -67,6 +67,13 @@ namespace PicoTest.Experiments.TrackerIMU
         TextMesh _hud;
         bool _togglePrev;
 
+        // 配对探针（B/Y 键）：绕过系统设置面板，直接调企业 API 尝试给新槽位配对 ——
+        // 验证「5 个是不是系统级硬顶」。槽位轮转 6→7→8→0（0=SwiftDevice.ID_ALL，语义未文档化，最后试）。
+        static readonly int[] PairSlots = { 6, 7, 8, 0 };
+        int _pairSlotIdx;
+        bool _pairPrev;
+        string _lastPairInfo = "";
+
         void Start()
         {
             string dir = Path.Combine(Application.persistentDataPath, "imu_test",
@@ -114,6 +121,7 @@ namespace PicoTest.Experiments.TrackerIMU
             if (Time.unscaledTime >= _nextEnumAt) ReconcileTrackers();
             PollImu();
             PumpStrategyToggle();
+            PumpPairingProbe();
             if (Time.unscaledTime >= _nextProbeAt) EmitProbe();
             _framesSinceProbe++;
         }
@@ -266,6 +274,34 @@ namespace PicoTest.Experiments.TrackerIMU
             return dev.isValid && dev.TryGetFeatureValue(CommonUsages.primaryButton, out bool b) && b;
         }
 
+        /// <summary>
+        /// 手柄 B/Y（任一手 secondaryButton）按下沿：对下一个候选槽位调 StartSwiftTrackerPairing。
+        /// 用法：把第 6 个 Tracker 置于配对模式（长按电源键至 LED 闪烁）再按键，观察 conn 是否 +1、
+        /// 新 SN 是否出现在枚举里。rc 语义未文档化，原样记录。不做 UnBond（不动现有配对）。
+        /// </summary>
+        void PumpPairingProbe()
+        {
+            bool pressed = IsSecondaryPressed(XRNode.RightHand) || IsSecondaryPressed(XRNode.LeftHand);
+            if (pressed && !_pairPrev)
+            {
+                int slot = PairSlots[_pairSlotIdx % PairSlots.Length];
+                _pairSlotIdx++;
+                int rc = int.MinValue;
+                try { rc = PXR_Enterprise.StartSwiftTrackerPairing(slot); }
+                catch (Exception e) { LogWarn($"StartSwiftTrackerPairing({slot}) crashed: {e.Message}"); }
+                _lastPairInfo = $"pair slot={slot} rc={rc}";
+                Log($"StartSwiftTrackerPairing({slot}) → rc={rc}（目标 Tracker 需在配对模式；盯 conn 是否 +1）");
+                _csv.WriteEvent(WallMs, "PAIR_ATTEMPT", $"slot={slot};rc={rc}");
+            }
+            _pairPrev = pressed;
+        }
+
+        static bool IsSecondaryPressed(XRNode node)
+        {
+            var dev = InputDevices.GetDeviceAtXRNode(node);
+            return dev.isValid && dev.TryGetFeatureValue(CommonUsages.secondaryButton, out bool b) && b;
+        }
+
         void EmitProbe()
         {
             _nextProbeAt = Time.unscaledTime + 1f;
@@ -297,8 +333,18 @@ namespace PicoTest.Experiments.TrackerIMU
                 go.transform.SetParent(cam.transform, false);
                 go.transform.localPosition = new Vector3(0f, -0.15f, 2f);
                 _hud = go.AddComponent<TextMesh>();
-                _hud.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.fontsettings");
-                _hud.GetComponent<MeshRenderer>().material = _hud.font.material;
+                // 真机包会裁剪内置字体（首轮实测 GetBuiltinResource 抛异常→HUD 不可见），逐级回退到 OS 动态字体
+                Font font = null;
+                try { font = Resources.GetBuiltinResource<Font>("LegacyRuntime.fontsettings"); } catch { }
+                if (font == null) { try { font = Resources.GetBuiltinResource<Font>("Arial.ttf"); } catch { } }
+                if (font == null) { try { font = Font.CreateDynamicFontFromOSFont("sans-serif", 48); } catch { } }
+                if (font == null) { try { font = Font.CreateDynamicFontFromOSFont("Roboto", 48); } catch { } }
+                if (font != null)
+                {
+                    _hud.font = font;
+                    _hud.GetComponent<MeshRenderer>().material = font.material;
+                }
+                else LogWarn("HUD 字体全部回退失败，HUD 将不可见（探针日志不受影响）");
                 _hud.characterSize = 0.02f;
                 _hud.fontSize = 48;
                 _hud.anchor = TextAnchor.MiddleCenter;
@@ -307,6 +353,7 @@ namespace PicoTest.Experiments.TrackerIMU
             }
             _hud.text = $"bt={(BodyTrackingEnabled ? 1 : 0)}  strat={StrategyTag}  conn={_sns.Count}  " +
                         $"disc={_disconnects}  fps={fps}\n{summary.Replace(" | ", "\n")}" +
+                        (_lastPairInfo.Length > 0 ? $"\n{_lastPairInfo}" : "") +
                         (_csv.WriteError != null ? "\n<CSV WRITE ERROR>" : "");
         }
 

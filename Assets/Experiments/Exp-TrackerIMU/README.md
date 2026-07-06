@@ -25,8 +25,9 @@
    - R2：体追关 + 每帧全量，5min → P3
    - R3：体追开 + round-robin，5min → 对照
 6. **策略切换**：手柄 A/X 键（任一手）在 round-robin ↔ 每帧全量 间切换；HUD 实时显示
-7. **取数**：`adb pull /sdcard/Android/data/<pkg>/files/imu_test/` → `python Tools/analyze_imu_test.py <目录>`
-8. **看探针**：`adb logcat -s Unity | grep TrackerImuProbe.probe`（每秒一行：连接数/每 SN 新样本率/ts 龄）
+7. **配对探针（第 6+ Tracker 实验）**：把额外 Tracker 置于配对模式（长按电源键至 LED 闪烁）→ 按手柄 **B/Y** 键，调 `StartSwiftTrackerPairing(槽位)`（槽位按 6→7→8→0 轮转，0=ID_ALL 语义未文档化）。看 HUD 的 `pair slot=N rc=` 和 `conn` 是否 +1；结果同时进 events.csv（`PAIR_ATTEMPT`）。验证「5 个是否系统级硬顶」
+8. **取数**：`adb pull /sdcard/Android/data/<pkg>/files/imu_test/` → `python Tools/analyze_imu_test.py <目录>`
+9. **看探针**：`adb logcat -s Unity | grep TrackerImuProbe.probe`（每秒一行：连接数/每 SN 新样本率/ts 龄）
 
 ## 落盘格式
 

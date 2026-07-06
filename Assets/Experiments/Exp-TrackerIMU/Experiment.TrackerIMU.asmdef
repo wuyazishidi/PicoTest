@@ -5,7 +5,8 @@
         "Main",
         "Main.Core",
         "PICO.TobSupport",
-        "Unity.XR.PICO"
+        "Unity.XR.PICO",
+        "Unity.InputSystem"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

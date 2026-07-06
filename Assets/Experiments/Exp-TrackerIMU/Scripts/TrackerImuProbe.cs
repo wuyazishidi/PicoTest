@@ -257,21 +257,17 @@ namespace PicoTest.Experiments.TrackerIMU
         /// <summary>手柄 A/X（任一手 primaryButton）按下沿：切换轮询策略并重开统计分段（P3）。</summary>
         void PumpStrategyToggle()
         {
-            bool pressed = IsPrimaryPressed(XRNode.RightHand) || IsPrimaryPressed(XRNode.LeftHand);
-            if (pressed && !_togglePrev)
-            {
-                strategy = strategy == PollStrategy.RoundRobin ? PollStrategy.FullEveryFrame : PollStrategy.RoundRobin;
-                _stats.ResetSegment(WallMs);
-                Log($"strategy → {StrategyTag}");
-                _csv.WriteEvent(WallMs, "STRATEGY", StrategyTag);
-            }
+            bool pressed = IsButtonPressed(secondary: false);
+            if (pressed && !_togglePrev) ToggleStrategy();
             _togglePrev = pressed;
         }
 
-        static bool IsPrimaryPressed(XRNode node)
+        void ToggleStrategy()
         {
-            var dev = InputDevices.GetDeviceAtXRNode(node);
-            return dev.isValid && dev.TryGetFeatureValue(CommonUsages.primaryButton, out bool b) && b;
+            strategy = strategy == PollStrategy.RoundRobin ? PollStrategy.FullEveryFrame : PollStrategy.RoundRobin;
+            _stats.ResetSegment(WallMs);
+            Log($"strategy → {StrategyTag}");
+            _csv.WriteEvent(WallMs, "STRATEGY", StrategyTag);
         }
 
         /// <summary>
@@ -281,25 +277,95 @@ namespace PicoTest.Experiments.TrackerIMU
         /// </summary>
         void PumpPairingProbe()
         {
-            bool pressed = IsSecondaryPressed(XRNode.RightHand) || IsSecondaryPressed(XRNode.LeftHand);
+            bool pressed = IsButtonPressed(secondary: true);
             if (pressed && !_pairPrev)
             {
                 int slot = PairSlots[_pairSlotIdx % PairSlots.Length];
                 _pairSlotIdx++;
-                int rc = int.MinValue;
-                try { rc = PXR_Enterprise.StartSwiftTrackerPairing(slot); }
-                catch (Exception e) { LogWarn($"StartSwiftTrackerPairing({slot}) crashed: {e.Message}"); }
-                _lastPairInfo = $"pair slot={slot} rc={rc}";
-                Log($"StartSwiftTrackerPairing({slot}) → rc={rc}（目标 Tracker 需在配对模式；盯 conn 是否 +1）");
-                _csv.WriteEvent(WallMs, "PAIR_ATTEMPT", $"slot={slot};rc={rc}");
+                TryPair(slot);
             }
             _pairPrev = pressed;
         }
 
-        static bool IsSecondaryPressed(XRNode node)
+        void TryPair(int slot)
         {
-            var dev = InputDevices.GetDeviceAtXRNode(node);
-            return dev.isValid && dev.TryGetFeatureValue(CommonUsages.secondaryButton, out bool b) && b;
+            int rc = int.MinValue;
+            try { rc = PXR_Enterprise.StartSwiftTrackerPairing(slot); }
+            catch (Exception e) { LogWarn($"StartSwiftTrackerPairing({slot}) crashed: {e.Message}"); }
+            _lastPairInfo = $"pair slot={slot} rc={rc}";
+            Log($"StartSwiftTrackerPairing({slot}) → rc={rc}（目标 Tracker 需在配对模式；盯 conn 是否 +1）");
+            _csv.WriteEvent(WallMs, "PAIR_ATTEMPT", $"slot={slot};rc={rc}");
+        }
+
+        void TryUnbond(int slot)
+        {
+            int rc = int.MinValue;
+            try { rc = PXR_Enterprise.UnBondSwiftTracker(slot); }
+            catch (Exception e) { LogWarn($"UnBondSwiftTracker({slot}) crashed: {e.Message}"); }
+            _lastPairInfo = $"unbond slot={slot} rc={rc}";
+            Log($"UnBondSwiftTracker({slot}) → rc={rc}");
+            _csv.WriteEvent(WallMs, "UNBOND_ATTEMPT", $"slot={slot};rc={rc}");
+        }
+
+        /// <summary>
+        /// 按键探测走双通道（首轮真机 InputDevices 全程无响应，原因未明）：
+        /// ① 传统 UnityEngine.XR.InputDevices；② 新 Input System 的 XRController 控件。任一按下即 true。
+        /// </summary>
+        static bool IsButtonPressed(bool secondary)
+        {
+            var usage = secondary ? CommonUsages.secondaryButton : CommonUsages.primaryButton;
+            foreach (var node in new[] { XRNode.RightHand, XRNode.LeftHand })
+            {
+                var dev = InputDevices.GetDeviceAtXRNode(node);
+                if (dev.isValid && dev.TryGetFeatureValue(usage, out bool b) && b) return true;
+            }
+            string ctlName = secondary ? "secondaryButton" : "primaryButton";
+            foreach (var d in UnityEngine.InputSystem.InputSystem.devices)
+            {
+                if (!(d is UnityEngine.InputSystem.XR.XRController)) continue;
+                var ctl = d.TryGetChildControl<UnityEngine.InputSystem.Controls.ButtonControl>(ctlName);
+                if (ctl != null && ctl.isPressed) return true;
+            }
+            return false;
+        }
+
+        /// <summary>手柄状态诊断（探针行用）：xr=传统通道有效手数，is=Input System XRController 数。</summary>
+        static string ControllerDiag()
+        {
+            int xr = 0;
+            if (InputDevices.GetDeviceAtXRNode(XRNode.LeftHand).isValid) xr++;
+            if (InputDevices.GetDeviceAtXRNode(XRNode.RightHand).isValid) xr++;
+            int isCount = 0;
+            foreach (var d in UnityEngine.InputSystem.InputSystem.devices)
+                if (d is UnityEngine.InputSystem.XR.XRController) isCount++;
+            return $"xr={xr} is={isCount}";
+        }
+
+        /// <summary>
+        /// adb 命令通道（不依赖手柄）：每秒检查 files/imu_test/cmd.txt，执行后删除。
+        /// 支持：`pair <slot>`、`unbond <slot>`、`strat`。用法：
+        /// adb shell "echo pair 6 > /sdcard/Android/data/<pkg>/files/imu_test/cmd.txt"
+        /// </summary>
+        void ProcessCommandFile()
+        {
+            string path = Path.Combine(Application.persistentDataPath, "imu_test", "cmd.txt");
+            try
+            {
+                if (!File.Exists(path)) return;
+                string raw = File.ReadAllText(path).Trim();
+                File.Delete(path);
+                Log($"cmd.txt → \"{raw}\"");
+                var parts = raw.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                if (parts.Length == 0) return;
+                switch (parts[0].ToLowerInvariant())
+                {
+                    case "pair" when parts.Length > 1 && int.TryParse(parts[1], out int ps): TryPair(ps); break;
+                    case "unbond" when parts.Length > 1 && int.TryParse(parts[1], out int us): TryUnbond(us); break;
+                    case "strat": ToggleStrategy(); break;
+                    default: LogWarn($"未知命令: {raw}（支持 pair <slot> / unbond <slot> / strat）"); break;
+                }
+            }
+            catch (Exception e) { LogWarn($"cmd.txt 处理失败: {e.Message}"); }
         }
 
         void EmitProbe()
@@ -309,10 +375,12 @@ namespace PicoTest.Experiments.TrackerIMU
             int fps = _framesSinceProbe;
             _framesSinceProbe = 0;
 
+            ProcessCommandFile();
+
             string summary = _stats.Summary(wallMs);
-            // logcat 可 grep 固定前缀；conn/断开数/帧率 是 P1、P3 的每秒快照
+            // logcat 可 grep 固定前缀；conn/断开数/帧率 是 P1、P3 的每秒快照；ctl=手柄输入通道诊断
             Debug.Log($"TrackerImuProbe.probe bt={(BodyTrackingEnabled ? 1 : 0)} strat={StrategyTag} " +
-                      $"conn={_sns.Count} disc={_disconnects} fps={fps} rows={_csv.SampleRows} | {summary}");
+                      $"conn={_sns.Count} disc={_disconnects} fps={fps} rows={_csv.SampleRows} ctl[{ControllerDiag()}] | {summary}");
 
             if (_csv.WriteError != null && !_csvErrorLogged)
             {

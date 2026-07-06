@@ -188,12 +188,24 @@ namespace PicoTest.Editor.Build
                     {
                         try { p.Kill(); } catch { }
                         Debug.LogError($"[Builder] 装机超时（180s）\n{stdout}");
+                        EditorUtility.DisplayDialog("装机超时", "adb 安装 180 秒未完成，已终止。\n检查设备连接后重试（详情见 Console）。", "好");
                         return;
                     }
                     if (p.ExitCode == 0)
+                    {
                         Debug.Log($"[Builder] 装机成功并已启动\n{stdout}");
+                        // 脚本输出形如 "Latest APK: Builds\PicoTest-TrackerImu.apk (98.9 MB, built ...)" 和 "INSTALLED: ..."
+                        string apkLine = stdout.Split('\n')
+                            .Select(l => l.Trim())
+                            .FirstOrDefault(l => l.StartsWith("INSTALLED:"));
+                        string what = apkLine != null ? apkLine.Substring("INSTALLED:".Length).Trim() : "APK";
+                        EditorUtility.DisplayDialog("装机成功", $"已安装并启动：\n{what}", "好");
+                    }
                     else
+                    {
                         Debug.LogError($"[Builder] 装机失败（exit {p.ExitCode}）\n{stdout}\n{stderr}");
+                        EditorUtility.DisplayDialog("装机失败", $"adb 安装失败（exit {p.ExitCode}）。\n详情见 Console。", "好");
+                    }
                 }
             }
             catch (Exception e)

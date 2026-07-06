@@ -143,11 +143,72 @@ namespace PicoTest.Editor.Build
         [MenuItem("PicoTest/Tracker IMU/Build APK (in-editor)")]
         public static void BuildTrackerImuInEditor()
         {
+            Debug.Log($"[Builder] TrackerImu 构建，ENABLE_BODY_TRACKING={(TrackerImuBtDefineOn() ? "开（R3 对照轮）" : "关（R1/R2）")}");
+            BuildSceneInEditor("Assets/Experiments/Exp-TrackerIMU/Scenes/TrackerImuTest.unity", TrackerImuApkName());
+        }
+
+        /// <summary>
+        /// 装机：把 Build APK 菜单的产物 adb install 到 PICO 并启动（复用 Tools/install-latest-apk.ps1，
+        /// 含 adb 定位/多设备检查）。按 ENABLE_BODY_TRACKING 自动选 -bt 包，与构建菜单一一对应。
+        /// 放在 PicoTest/ 直下（与 Tracker IMU 子菜单同级），一键可点。
+        /// </summary>
+        [MenuItem("PicoTest/Install Tracker IMU APK + Launch (adb)")]
+        public static void InstallTrackerImuApk()
+        {
+            string apkPath = Path.Combine(OutputDir, TrackerImuApkName());
+            if (!File.Exists(apkPath))
+            {
+                Debug.LogError($"[Builder] APK 不存在：{apkPath} —— 先跑 PicoTest/Tracker IMU/Build APK (in-editor)。" +
+                               "（注意体追开关状态决定包名是否带 -bt）");
+                return;
+            }
+            InstallApkViaScript(apkPath);
+        }
+
+        private static bool TrackerImuBtDefineOn()
+        {
             PlayerSettings.GetScriptingDefineSymbols(NamedBuildTarget.Android, out string[] defines);
-            bool bt = defines.Contains("ENABLE_BODY_TRACKING");
-            Debug.Log($"[Builder] TrackerImu 构建，ENABLE_BODY_TRACKING={(bt ? "开（R3 对照轮）" : "关（R1/R2）")}");
-            BuildSceneInEditor("Assets/Experiments/Exp-TrackerIMU/Scenes/TrackerImuTest.unity",
-                bt ? "PicoTest-TrackerImu-bt.apk" : "PicoTest-TrackerImu.apk");
+            return defines.Contains("ENABLE_BODY_TRACKING");
+        }
+
+        private static string TrackerImuApkName()
+            => TrackerImuBtDefineOn() ? "PicoTest-TrackerImu-bt.apk" : "PicoTest-TrackerImu.apk";
+
+        /// <summary>同步调用 Tools/install-latest-apk.ps1 -Launch 装机（阻塞编辑器 ~10-30s，输出转控制台）。</summary>
+        private static void InstallApkViaScript(string apkPath)
+        {
+            var psi = new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = "powershell",
+                Arguments = $"-ExecutionPolicy Bypass -File Tools\\install-latest-apk.ps1 -Path \"{apkPath}\" -Launch",
+                WorkingDirectory = Directory.GetCurrentDirectory(),
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true,
+            };
+            try
+            {
+                using (var p = System.Diagnostics.Process.Start(psi))
+                {
+                    string stdout = p.StandardOutput.ReadToEnd();
+                    string stderr = p.StandardError.ReadToEnd();
+                    if (!p.WaitForExit(180_000))
+                    {
+                        try { p.Kill(); } catch { }
+                        Debug.LogError($"[Builder] 装机超时（180s）：{apkPath}\n{stdout}");
+                        return;
+                    }
+                    if (p.ExitCode == 0)
+                        Debug.Log($"[Builder] 装机成功并已启动：{apkPath}\n{stdout}");
+                    else
+                        Debug.LogError($"[Builder] 装机失败（exit {p.ExitCode}）：{apkPath}\n{stdout}\n{stderr}");
+                }
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"[Builder] 装机脚本调用异常: {e}");
+            }
         }
 
         public static void BuildPico()

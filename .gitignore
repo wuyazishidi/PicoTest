@@ -99,3 +99,6 @@ Assets/Experiments/Exp-WebRTC/Server/*.mp4.meta
 Assets/StreamingAssets/sbs_frame.png
 Assets/StreamingAssets/sbs_frame.png.meta
 /Artifacts/
+
+# 私密调研文档(逆向/敏感,永不入库、不上传)
+/Docs/private/

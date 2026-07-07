@@ -297,6 +297,29 @@ namespace PicoTest.Experiments.TrackerIMU
             _csv.WriteEvent(WallMs, "PAIR_ATTEMPT", $"slot={slot};rc={rc}");
         }
 
+        /// <summary>
+        /// 完整倾倒 GetSwiftTrackerDevices 返回的每台设备的全部字段（含离线/未绑定项）——
+        /// 常规对账只看 ONLINE，配对模式中的新 Tracker 若被服务"看见"但未绑定，只有这里能暴露。
+        /// </summary>
+        void DumpDevices()
+        {
+            List<SwiftDevice> devices = null;
+            try { devices = PXR_Enterprise.GetSwiftTrackerDevices(); }
+            catch (Exception e) { LogWarn($"GetSwiftTrackerDevices threw: {e.Message}"); return; }
+            int n = devices?.Count ?? 0;
+            Log($"DUMP: GetSwiftTrackerDevices → {n} 台");
+            if (devices == null) return;
+            for (int i = 0; i < devices.Count; i++)
+            {
+                var d = devices[i];
+                string line = $"DUMP[{i}]: id={d.id} sn={d.sn} connect={d.connectState} bind={d.bindState} " +
+                              $"pos={d.position} battery={d.battery} charge={d.chargeStatus} " +
+                              $"imuType={d.imuType} gen={d.generation} fw={d.fwVersion} hw={d.hwVersion} addr={d.addr}";
+                Log(line);
+                _csv.WriteEvent(WallMs, "DUMP", line.Replace(",", ";"));
+            }
+        }
+
         void TryUnbond(int slot)
         {
             int rc = int.MinValue;
@@ -362,7 +385,8 @@ namespace PicoTest.Experiments.TrackerIMU
                     case "pair" when parts.Length > 1 && int.TryParse(parts[1], out int ps): TryPair(ps); break;
                     case "unbond" when parts.Length > 1 && int.TryParse(parts[1], out int us): TryUnbond(us); break;
                     case "strat": ToggleStrategy(); break;
-                    default: LogWarn($"未知命令: {raw}（支持 pair <slot> / unbond <slot> / strat）"); break;
+                    case "dump": DumpDevices(); break;
+                    default: LogWarn($"未知命令: {raw}（支持 pair <slot> / unbond <slot> / strat / dump）"); break;
                 }
             }
             catch (Exception e) { LogWarn($"cmd.txt 处理失败: {e.Message}"); }

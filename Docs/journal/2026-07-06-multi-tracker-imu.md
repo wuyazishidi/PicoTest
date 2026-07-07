@@ -23,6 +23,24 @@
 
 **YIUIMCP RPC 之前 502 不是 Unity 忙，是本机 HTTP 代理拦截了 127.0.0.1** —— curl 加 `--noproxy "*"` 立即 200。此前 memory 记的「轮询等 Unity 空闲」对这台机器不完全对。
 
+## 真机首日实测（2026-07-06 下午，PICO 4U，5× Tracker）
+
+**核心问题当场有了初步答案：无体追时 5 Tracker IMU 完全可用。**
+
+- 启动 0.1s 内 5 个全连（无体追、无校准），RR 策略下每路稳定 **18.0Hz**（90fps÷5 理论值），
+  帧率满 90，零 null、零单调违规，运行 30+ 分钟无系统主动断开（中途 3 次断开为人为按电源键，均自动重连）。
+- **配对上限实验**（App 内绕过系统面板）：`StartSwiftTrackerPairing(6/7/8/0)` 全部 rc=0（受理），
+  但第 6 个实体 Tracker 在配对模式下始终不被绑定；`dump` 全量枚举确认服务设备表**恰好 5 台全 bind=1**，
+  第 6 个完全不可见。→ **强证据：5 = 系统服务端槽位上限**。鉴别实验 B（unbond 一个再配回）用户选择不执行
+  （保留现有配对），故「API 用法不完整」的备择解释未 100% 排除。
+- **工具链发现**：手柄按键两条输入通道（XR InputDevices + Input System）真机全程无响应
+  `ctl[xr=0 is=0]`（原因未查明）→ 加了 `files/imu_test/cmd.txt` adb 命令通道
+  （`pair/unbond/strat/dump`），PC 可直接驱动实验，比手柄可靠。
+- HUD：真机包裁剪 `LegacyRuntime.fontsettings`（引擎打一条 E 日志后返回 null），回退链生效。
+- 电量量纲：SwiftDevice.battery 返回 7~10 且会话内 8→7 递减 → **0~10 级**，不是百分比（YC-Ego 遗留疑问解决）。
+- 配对/校准结论：配对可全 App 内（企业 API，槽位内有效）；校准只能 App 内拉起系统 single-glance 流程；
+  纯 IMU 路线完全不需要校准。
+
 ## 遗留（设备到位后）
 
 1. 编辑器里跑菜单 `PicoTest/Tracker IMU/Build Test Scene` 生成场景（本轮未自动执行：RPC ExecuteMenu 会静默丢弃编辑器当前未保存场景，人来做）

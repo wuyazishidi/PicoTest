@@ -4,6 +4,7 @@
     "references": [
         "Main",
         "Main.Core",
+        "PicoTest.Editor",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"
     ],

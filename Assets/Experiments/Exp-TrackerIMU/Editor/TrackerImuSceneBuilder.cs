@@ -34,7 +34,7 @@ namespace PicoTest.Experiments.TrackerIMU.Editor
             EditorSceneManager.OpenScene(ScenePath);
             Debug.Log($"[TrackerImuSceneBuilder] 已生成并打开 {ScenePath}。\n" +
                       $"当前体追编译开关 {BtDefine}={(HasBtDefine() ? "开" : "关")}（菜单 PicoTest/Tracker IMU 切换）。\n" +
-                      "打包：菜单 PicoTest/Tracker IMU/Build APK (in-editor)；真机流程见 Assets/Experiments/Exp-TrackerIMU/README.md。");
+                      "打包：菜单 PicoTest/Build APK/Tracker IMU；真机流程见 Assets/Experiments/Exp-TrackerIMU/README.md。");
         }
 
         [MenuItem("PicoTest/Tracker IMU/Enable Body Tracking Define")]

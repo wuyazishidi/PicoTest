@@ -22,7 +22,7 @@
 ## 用法
 
 1. 菜单 `PicoTest/VST Passthrough/Build Demo Scene` → 生成场景
-2. 菜单 `PicoTest/VST Passthrough/Build APK (in-editor)` → `Builds/PicoTest-VstPassthrough.apk`（Release，规避 CheckJNI 崩溃）
+2. 菜单 `PicoTest/Build APK/VST Passthrough` → `Builds/PicoTest-VstPassthrough.apk`（Release，规避 CheckJNI 崩溃；batchmode：`Builder.BuildSceneApk -scene vstpassthrough`）
 3. 装机：`Tools/install-latest-apk.ps1 -Launch`
 4. 真机调参（免重打包）：
    ```

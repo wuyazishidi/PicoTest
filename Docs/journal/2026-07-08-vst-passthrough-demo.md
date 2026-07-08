@@ -35,3 +35,17 @@
 - 平移补偿未做（v1 旋转-only）：相机-眼位置差数 cm，近距离有残留视差误差；`ImuCamRig` 已输出相机头系位置备用。
 - frame.timestamp（SDK ns）与 Unity 时钟换算未接：v1 用固定 latencyMs 近似，真机调出最稳值后可再接真时间戳。
 - `cover` 命令只更新 thetaMax（裁剪），穹顶网格弧度改 Inspector 后重启生效。
+
+---
+
+## 追加（同日）：Builder 重构为场景注册表（每场景独立打包）
+
+需求：参考 YC-Ego `BuildScript.cs`，让现有几个场景都能分别打包。
+
+- **`Builder.SceneRegistry`**（公开注册表，key → 场景路径 → APK 名）驱动一切：统一菜单 `PicoTest/Build APK/*` 五项——`xrlive`(VstLive) / `vstpassthrough` / `webrtc` / `trackerimu`（保留 ENABLE_BODY_TRACKING 命名分流）/ `xrdemo`(静帧立体，**新增入口**)。`FisheyeDomeDemo` 不注册：纯 PC 扫视 demo 且依赖 gitignore 的人物帧，出 APK 无意义（代码注释记录）。
+- **通用 batchmode 入口** `Builder.BuildSceneApk -scene <key> [-outputPath ...]`（退出码 0/1/2），照抄 YC-Ego 的 `ClearScriptAssembliesAndRefresh`（batchmode 不刷新 AssetDatabase 且缓存陈旧程序集 → 改的代码可能不进 APK，YC-Ego troubleshooting §9.6.1）；`BuildVstLiveTest`（dev 构建）/`BuildPico`（整包）保留兼容并同样补了防陈旧处理。
+- **菜单构建成功后 `RevealInFinder` 定位产物**（YC-Ego 交互习惯）；`xrdemo` 构建时缺 `sbs_frame.png` 提前警告（构建会成功但真机无帧）。
+- **旧菜单迁移**：`Build VST Live (in-editor)`/`Build WebRTC Dome (in-editor)`/`Tracker IMU/Build APK (in-editor)`/`VST Passthrough/Build APK` 全部并入 `Build APK/*`；同步更新 Exp-TrackerIMU、Exp-VstPassthrough 的 README 与场景生成器日志文案（journal/plans 历史文档不动）。VstPassthrough 实验内的重复构建菜单移除，归口中央注册表。
+- **守护测试** `BuildSceneRegistryTests`（EditMode +3）：注册场景必须存在于磁盘（场景改名先红测试，而非点菜单才炸）、key 唯一、APK 名唯一且 .apk 结尾。`Tests.EditMode` asmdef 增引 `PicoTest.Editor`。
+- 测试：**EditMode 98 / PlayMode 8 全过**（1 skip 为既有 HEVC 探针），tests-green 已写。
+- 未采纳 YC-Ego 的：时间戳 APK 名（本项目约定固定名 + install-latest-apk.ps1 按修改时间挑最新，改名会破坏文档/脚本约定）、keystore 锁定与 OTA 产物（本项目无 OTA 需求）。

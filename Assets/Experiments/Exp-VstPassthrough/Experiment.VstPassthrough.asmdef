@@ -1,0 +1,19 @@
+{
+    "name": "Experiment.VstPassthrough",
+    "rootNamespace": "PicoTest.Experiments.VstPassthrough",
+    "references": [
+        "Main",
+        "Main.Core",
+        "Main.Vst",
+        "PICO.TobSupport"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

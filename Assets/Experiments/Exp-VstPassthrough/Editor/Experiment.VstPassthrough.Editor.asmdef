@@ -1,0 +1,20 @@
+{
+    "name": "Experiment.VstPassthrough.Editor",
+    "rootNamespace": "PicoTest.Experiments.VstPassthrough.Editor",
+    "references": [
+        "Experiment.VstPassthrough",
+        "Main",
+        "Main.Core"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

@@ -10,7 +10,7 @@ namespace PicoTest.Editor.Build
 {
     /// <summary>
     /// Android 构建/装机入口（参考 YC-Ego BuildScript 的注册表式组织），两种用法：
-    ///   - 编辑器菜单：PicoTest/Build APK/*（每个场景一个独立 APK）、PicoTest/Install Latest APK。
+    ///   - 编辑器菜单：PicoTest/Build APK/*（每个场景一个独立 APK）、PicoTest/Install APK/*（按场景装机）。
     ///   - Headless（需编辑器关闭，batchmode 与 YIUIMCP 互斥）：
     ///       Unity.exe -batchmode -quit -projectPath ... -buildTarget Android \
     ///                 -executeMethod PicoTest.Editor.Build.Builder.BuildSceneApk -scene xrlive [-outputPath ...]
@@ -230,14 +230,44 @@ namespace PicoTest.Editor.Build
             }
         }
 
-        // ───────────────────────── Install 菜单（adb） ─────────────────────────
+        // ───────────────────────── Install 菜单（adb，每场景一项） ─────────────────────────
+        // 与 Build APK/* 一一对应（YC-Ego 的按变体分开装机模式）：按注册表 APK 名精确安装，
+        // 避免"全局最新"把另一个场景的包装上设备。全部复用 Tools/install-latest-apk.ps1（-Launch）。
 
-        /// <summary>
-        /// 装机：把最新构建的 APK adb install 到 PICO 并启动。复用 Tools/install-latest-apk.ps1
-        /// 默认行为（在 Builds\/Build\/项目根挑修改时间最新的 .apk；含 adb 定位/多设备检查）。
-        /// </summary>
-        [MenuItem("PicoTest/Install Latest APK + Launch (adb)")]
+        /// <summary>装最新构建的 APK（不限场景，按修改时间挑 Builds\/Build\/项目根最新的 .apk）。</summary>
+        [MenuItem("PicoTest/Install APK/Latest - 最新构建（不限场景）", false, 10)]
         public static void InstallLatestApk() => InstallApkViaScript(null);
+
+        [MenuItem("PicoTest/Install APK/XR Live - VST 实时鱼眼穹顶", false, 30)]
+        public static void InstallXrLiveApk() => InstallByKey("xrlive");
+
+        [MenuItem("PicoTest/Install APK/VST Passthrough - 透视复现", false, 31)]
+        public static void InstallVstPassthroughApk() => InstallByKey("vstpassthrough");
+
+        [MenuItem("PicoTest/Install APK/WebRTC Dome - 远端双目流", false, 32)]
+        public static void InstallWebRtcApk() => InstallByKey("webrtc");
+
+        /// <summary>按当前 ENABLE_BODY_TRACKING define 装对应变体（与构建命名同一分流，防混包）。</summary>
+        [MenuItem("PicoTest/Install APK/Tracker IMU - 多追踪器", false, 33)]
+        public static void InstallTrackerImuApk() => InstallByKey("trackerimu");
+
+        [MenuItem("PicoTest/Install APK/Fisheye XR Demo - 静帧立体", false, 34)]
+        public static void InstallXrDemoApk() => InstallByKey("xrdemo");
+
+        /// <summary>按注册表 key 精确装机：Builds/{APK 名} 必须已构建，缺包弹窗提示先构建（YC-Ego 同款拦截）。</summary>
+        private static void InstallByKey(string key)
+        {
+            var entry = FindEntry(key);
+            if (entry == null) { Debug.LogError($"[Builder] 未注册的场景 key：{key}"); return; }
+            string apkPath = Path.Combine(OutputDir, entry.Value.ApkName());
+            if (!File.Exists(apkPath))
+            {
+                EditorUtility.DisplayDialog("APK 未构建",
+                    $"{apkPath} 不存在。\n先用菜单 PicoTest/Build APK 构建对应场景。", "好");
+                return;
+            }
+            InstallApkViaScript(apkPath);
+        }
 
         /// <summary>同步调用 Tools/install-latest-apk.ps1 -Launch 装机（阻塞编辑器 ~10-30s，输出转控制台）。
         /// apkPath 为 null 时不传 -Path，走脚本默认的"最新 APK"搜索。</summary>

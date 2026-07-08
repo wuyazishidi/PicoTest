@@ -49,3 +49,9 @@
 - **守护测试** `BuildSceneRegistryTests`（EditMode +3）：注册场景必须存在于磁盘（场景改名先红测试，而非点菜单才炸）、key 唯一、APK 名唯一且 .apk 结尾。`Tests.EditMode` asmdef 增引 `PicoTest.Editor`。
 - 测试：**EditMode 98 / PlayMode 8 全过**（1 skip 为既有 HEVC 探针），tests-green 已写。
 - 未采纳 YC-Ego 的：时间戳 APK 名（本项目约定固定名 + install-latest-apk.ps1 按修改时间挑最新，改名会破坏文档/脚本约定）、keystore 锁定与 OTA 产物（本项目无 OTA 需求）。
+
+## 追加2（同日）：Install APK 子菜单（按场景装机）
+
+- 与 Build APK/* 对称的 `PicoTest/Install APK/*`（YC-Ego 按变体分开装机模式）：每场景一项按注册表 APK 名**精确安装**（避免"全局最新"把别的场景包装上设备）+ `Latest - 最新构建（不限场景）`（原 `Install Latest APK + Launch` 迁入）。缺包弹窗提示先构建；TrackerImu 按当前体追 define 装对应变体。全部复用 `Tools/install-latest-apk.ps1 -Path ... -Launch`（本就支持 -Path，首次实际启用）。
+- 实测：用户经新菜单构建 vstpassthrough 成功（Succeeded, 67.7MB）；装机路径端到端工作，失败仅因 `no adb device connected/authorized`（设备未连，环境问题非代码）。
+- 测试：EditMode 98 / PlayMode 8 全绿。

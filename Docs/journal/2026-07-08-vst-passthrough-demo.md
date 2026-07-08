@@ -55,3 +55,11 @@
 - 与 Build APK/* 对称的 `PicoTest/Install APK/*`（YC-Ego 按变体分开装机模式）：每场景一项按注册表 APK 名**精确安装**（避免"全局最新"把别的场景包装上设备）+ `Latest - 最新构建（不限场景）`（原 `Install Latest APK + Launch` 迁入）。缺包弹窗提示先构建；TrackerImu 按当前体追 define 装对应变体。全部复用 `Tools/install-latest-apk.ps1 -Path ... -Launch`（本就支持 -Path，首次实际启用）。
 - 实测：用户经新菜单构建 vstpassthrough 成功（Succeeded, 67.7MB）；装机路径端到端工作，失败仅因 `no adb device connected/authorized`（设备未连，环境问题非代码）。
 - 测试：EditMode 98 / PlayMode 8 全绿。
+
+## 追加3（同日）：真机部署成功 + ImuCamRig 真机坐实
+
+- **装机踩坑**：设备（PA9410MGL**5121119G**，非之前的 …349G）上有签名不一致的同包名旧包 → `INSTALL_FAILED_UPDATE_INCOMPATIBLE`。`adb uninstall com.wuyazishidi.picotest` 后重装成功。多台构建机/多台设备混用时会反复遇到，记住先卸后装。
+- **VstPassthroughDemo 真机启动全绿**（logcat）：透视 via PXR_Manager 开启；标定就绪 **T 判读=cam_to_imu 共线度=0.9999 基线=64.1mm 左相机头系位置 x=−0.032**（ImuCamRig 的 PC 测试结论在真机数据上坐实）；VST 相机 RAW 流 2560×960@30 首帧即到；mode=capture radius=1.5 latency=80ms ext=calib。
+- SDK 运行时报的相机外参平移与烤入的 cam_calib.json 一致 → 标定文件与本台设备匹配（换机顾虑排除）。
+- 待人工验收（设计 §验收标准三组对比）：A 键 vs 原生透视对齐、mode capture vs head 稳定性、ext calib vs id 改善。
+

@@ -27,13 +27,28 @@ Exp-WebRTC 是 WebRTC 打通期（WorldLocked + 云台伺服 + 单位阵外参�
 ### 编辑器纯冒烟（无信令/浏览器）
 `useRealWebRtc=false` → 假帧源（左红/右蓝渐变），验证源→穹顶链路。
 
-### 真机
-1. 菜单 `PicoTest/Build APK/Robot Stream` → `Builds/PicoTest-RobotStream.apk`
-2. `PicoTest/Install APK/Robot Stream` 装机（签名冲突先 `adb uninstall com.wuyazishidi.picotest`）
-3. `signalingUrl` 改成 PC 局域网 IP；PC 起信令 + 发送端
-4. 调参（免重打包）：`adb shell "echo mode captureproxy > /sdcard/Android/data/com.wuyazishidi.picotest/files/robotstream/cmd.txt"`
-   命令：`radius <m>` `latency <ms>` `mode worldlocked|captureproxy` `ext calib|id` `dome on|off` `flip 0|1` `cover <deg>` `feather <deg>` `hud on|off` `dump`
-5. 手柄：**A**=隐藏穹顶对比原生透视，**B**=安全退出
+### 真机（PICO 与 PC 同一局域网）
+
+信令地址**不能用 127.0.0.1**（那是 PICO 自己）——必须指 PC 的局域网 IP（`ipconfig` / `Get-NetIPAddress` 查，如 `172.16.3.95`）。地址是**运行时可配的**，装一次包后换 PC/换 IP 不用重打包：
+
+1. 打包：菜单 `PicoTest/Build APK/Robot Stream` → `Builds/PicoTest-RobotStream.apk`
+2. 装机：`PicoTest/Install APK/Robot Stream`（签名冲突先 `adb uninstall com.wuyazishidi.picotest`）
+3. **配信令 IP（二选一，免重打包）**：
+   ```bash
+   PKG=com.wuyazishidi.picotest
+   # 启动前静态配（下次启动读）：
+   adb shell "echo ws://172.16.3.95:8765 > /sdcard/Android/data/$PKG/files/robotstream/signaling.txt"
+   # 或运行中热重连（立即换）：
+   adb shell "echo signaling ws://172.16.3.95:8765 > /sdcard/Android/data/$PKG/files/robotstream/cmd.txt"
+   ```
+   （都不配则用场景里编译进来的默认 `ws://127.0.0.1:8765`，真机连不上。）
+4. PC 侧：`node Server/signaling.js`；浏览器开 `http://172.16.3.95:8765/`（发送端，循环 camera.mp4）
+5. 顺序：PICO 应用先就绪（连上信令等 offer）→ 浏览器信令框填 `ws://172.16.3.95:8765` →「连接信令」→「开始呼叫」→ 穹顶显示
+6. 现场调参（免重打包，写 `files/robotstream/cmd.txt`，一行一条）：
+   `signaling <ws://ip:port>` · `radius <m>` · `latency <ms>` · `mode worldlocked|captureproxy` · `ext calib|id` · `dome on|off` · `flip 0|1` · `cover <deg>` · `feather <deg>` · `hud on|off` · `dump`
+7. 手柄：**A**=隐藏穹顶对比原生透视，**B**=安全退出
+
+> 防火墙：PC 首次跑 node 放行「专用网络」入站（8765 TCP + WebRTC 媒体 UDP）。纯内网无外网也能连（同网段 host candidate 直连，STUN 仅拿不到公网映射）。
 
 ## 位姿模式
 

@@ -62,7 +62,7 @@ namespace PicoTest.Experiments.RobotStream
         private bool _hasRigExtrinsics;
         private TextMesh _hud;
         private bool _hudOn = true, _domeOn = true;
-        private bool _aPrev, _bPrev, _quitting;
+        private bool _aPrev, _bPrev, _quitting, _pumpStarted;
         private float _nextCmdPoll, _nextHudRefresh;
         private int _framesThisSec; private float _fpsWindowStart, _measuredFps;
 
@@ -107,15 +107,50 @@ namespace PicoTest.Experiments.RobotStream
 
             CreateHud();
 
-            _source = Source ?? (useRealWebRtc
+            ResolveSignalingUrl();   // 运行时覆盖：files/robotstream/signaling.txt 优先于场景默认（免重打包换 IP）
+            StartSource(Source);
+
+            Debug.Log($"[RobotStream] 启动：src={(useRealWebRtc ? "webrtc" : "fake")} signaling={signalingUrl} mode={poseMode} " +
+                      $"radius={radius} latency={latencyMs}ms ext={(useCalibExtrinsics && _hasRigExtrinsics ? "calib" : "id")}");
+        }
+
+        /// <summary>启动/切换视频源；WebRTC 渲染泵（全局 WebRTC.Update()）只驱动一次。</summary>
+        private void StartSource(IWebRtcVideoSource injected)
+        {
+            _source = injected ?? (useRealWebRtc
                 ? (IWebRtcVideoSource)new UnityWebRtcVideoSource(new WebSocketSignaling(), signalingUrl, this)
                 : new FakeStereoVideoSource());
             _source.Start();
             var pump = _source.GetRenderPump();
-            if (pump != null) StartCoroutine(pump);   // com.unity.webrtc 的 WebRTC.Update()
+            if (pump != null && !_pumpStarted) { StartCoroutine(pump); _pumpStarted = true; }
+        }
 
-            Debug.Log($"[RobotStream] 启动：src={(useRealWebRtc ? "webrtc" : "fake")} mode={poseMode} " +
-                      $"radius={radius} latency={latencyMs}ms ext={(useCalibExtrinsics && _hasRigExtrinsics ? "calib" : "id")}");
+        /// <summary>
+        /// 信令地址运行时覆盖：读 persistentDataPath/robotstream/signaling.txt（一行 ws://ip:port），
+        /// 有内容即覆盖场景里编译进来的默认值——真机换 PC/换 IP 只需 adb push，不用重打包。
+        /// </summary>
+        private void ResolveSignalingUrl()
+        {
+            try
+            {
+                string path = Path.Combine(Application.persistentDataPath, "robotstream", "signaling.txt");
+                if (!File.Exists(path)) return;
+                string u = File.ReadAllText(path).Trim();
+                if (!string.IsNullOrEmpty(u)) { signalingUrl = u; Debug.Log($"[RobotStream] 信令地址覆盖自 signaling.txt → {u}"); }
+            }
+            catch (Exception e) { Debug.LogWarning($"[RobotStream] 读 signaling.txt 失败: {e.Message}"); }
+        }
+
+        /// <summary>cmd `signaling <url>`：停旧源、以新地址重连（免重启应用）。</summary>
+        private void ReconnectSignaling(string url)
+        {
+            signalingUrl = url;
+            useRealWebRtc = true;
+            try { _source?.Stop(); } catch { }
+            _lastFrame = null;
+            Source = null;
+            StartSource(null);
+            Debug.Log($"[RobotStream] 重连信令 → {url}");
         }
 
         /// <summary>
@@ -276,8 +311,8 @@ namespace PicoTest.Experiments.RobotStream
 
         // ── adb 调参通道（照搬 VstPassthrough cmd.txt 模式）─────────────────
         // adb shell "echo mode captureproxy > /sdcard/Android/data/<pkg>/files/robotstream/cmd.txt"
-        // 命令：radius <m> | latency <ms> | mode worldlocked|captureproxy | ext calib|id
-        //       | dome on|off | flip 0|1 | cover <deg> | feather <deg> | hud on|off | dump
+        // 命令：signaling <ws://ip:port>（热重连）| radius <m> | latency <ms> | mode worldlocked|captureproxy
+        //       | ext calib|id | dome on|off | flip 0|1 | cover <deg> | feather <deg> | hud on|off | dump
 
         private void PollCmdFile()
         {
@@ -300,9 +335,11 @@ namespace PicoTest.Experiments.RobotStream
         {
             if (string.IsNullOrEmpty(cmd)) return;
             var parts = cmd.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
-            string arg = parts.Length > 1 ? parts[1] : null;
+            string arg = parts.Length > 1 ? parts[1] : null;   // 原样保留大小写（URL 用）
             switch (parts[0].ToLowerInvariant())
             {
+                case "signaling" when !string.IsNullOrEmpty(arg):
+                    ReconnectSignaling(arg); break;
                 case "radius" when TryF(arg, out float r):
                     radius = Mathf.Clamp(r, 0.3f, 50f);
                     _dome.radius = radius;
@@ -335,7 +372,7 @@ namespace PicoTest.Experiments.RobotStream
                     _hudOn = arg != "off";
                     if (_hud != null) _hud.gameObject.SetActive(_hudOn); break;
                 case "dump":
-                    Debug.Log($"[RobotStream] dump: src={(useRealWebRtc ? "webrtc" : "fake")} mode={poseMode} " +
+                    Debug.Log($"[RobotStream] dump: src={(useRealWebRtc ? "webrtc" : "fake")} signaling={signalingUrl} mode={poseMode} " +
                               $"radius={radius} latency={latencyMs} ext={(useCalibExtrinsics && _hasRigExtrinsics ? "calib" : "id")} " +
                               $"dome={_domeOn} flip={flipV} cover={coverageDeg} fps={_measuredFps:F1} frame={(_lastFrame != null)}");
                     break;

@@ -1,0 +1,19 @@
+{
+    "name": "Experiment.RobotStream",
+    "rootNamespace": "PicoTest.Experiments.RobotStream",
+    "references": [
+        "Main",
+        "Main.Core",
+        "Experiment.WebRTC",
+        "Experiment.VstPassthrough"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

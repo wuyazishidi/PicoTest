@@ -46,6 +46,8 @@ namespace PicoTest.Editor.Build
                 TrackerImuApkName),
             new SceneApk("xrdemo", "Assets/Main/Scenes/FisheyeDomeXRDemo.unity",
                 () => "PicoTest-XRDemo.apk"),
+            new SceneApk("robotstream", "Assets/Experiments/Exp-RobotStream/Scenes/RobotStreamDemo.unity",
+                () => "PicoTest-RobotStream.apk"),
         };
 
         // ───────────────────────── Build 菜单（每场景一项） ─────────────────────────
@@ -68,6 +70,9 @@ namespace PicoTest.Editor.Build
 
         [MenuItem("PicoTest/Build APK/Fisheye XR Demo - 静帧立体", false, 14)]
         public static void BuildXrDemoApk() => BuildByKey("xrdemo");
+
+        [MenuItem("PicoTest/Build APK/Robot Stream - WebRTC 透视预演", false, 15)]
+        public static void BuildRobotStreamApk() => BuildByKey("robotstream");
 
         // ───────────────────────── 构建核心 ─────────────────────────
 
@@ -253,6 +258,9 @@ namespace PicoTest.Editor.Build
 
         [MenuItem("PicoTest/Install APK/Fisheye XR Demo - 静帧立体", false, 34)]
         public static void InstallXrDemoApk() => InstallByKey("xrdemo");
+
+        [MenuItem("PicoTest/Install APK/Robot Stream - WebRTC 透视预演", false, 35)]
+        public static void InstallRobotStreamApk() => InstallByKey("robotstream");
 
         /// <summary>按注册表 key 精确装机：Builds/{APK 名} 必须已构建，缺包弹窗提示先构建（YC-Ego 同款拦截）。</summary>
         private static void InstallByKey(string key)

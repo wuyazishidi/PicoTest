@@ -1,0 +1,20 @@
+{
+    "name": "Experiment.RobotDsDome.Editor",
+    "rootNamespace": "PicoTest.Experiments.RobotDsDome.Editor",
+    "references": [
+        "Experiment.RobotDsDome",
+        "Main",
+        "Main.Core"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

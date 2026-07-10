@@ -89,6 +89,9 @@ Assets/StreamingAssets/metadata.json
 Assets/StreamingAssets/metadata.json.meta
 Assets/StreamingAssets/sbs_frame.png
 Assets/StreamingAssets/sbs_frame.png.meta
+# 机器人实拍 SBS 视频（19MB，可能含人；标定 yaml 是纯数字，入库）
+Assets/StreamingAssets/episode_*.mp4
+Assets/StreamingAssets/episode_*.mp4.meta
 
 # Unity Burst 调试产物(构建生成,勿提交)
 *_BurstDebugInformation_DoNotShip/

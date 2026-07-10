@@ -48,6 +48,8 @@ namespace PicoTest.Editor.Build
                 () => "PicoTest-XRDemo.apk"),
             new SceneApk("robotstream", "Assets/Experiments/Exp-RobotStream/Scenes/RobotStreamDemo.unity",
                 () => "PicoTest-RobotStream.apk"),
+            new SceneApk("robotds", "Assets/Experiments/Exp-RobotDsDome/Scenes/RobotDsDomeDemo.unity",
+                () => "PicoTest-RobotDsDome.apk"),
         };
 
         // ───────────────────────── Build 菜单（每场景一项） ─────────────────────────
@@ -73,6 +75,9 @@ namespace PicoTest.Editor.Build
 
         [MenuItem("PicoTest/Build APK/Robot Stream - WebRTC 透视预演", false, 15)]
         public static void BuildRobotStreamApk() => BuildByKey("robotstream");
+
+        [MenuItem("PicoTest/Build APK/Robot DS Dome - 双球模型双目", false, 16)]
+        public static void BuildRobotDsApk() => BuildByKey("robotds");
 
         // ───────────────────────── 构建核心 ─────────────────────────
 
@@ -261,6 +266,9 @@ namespace PicoTest.Editor.Build
 
         [MenuItem("PicoTest/Install APK/Robot Stream - WebRTC 透视预演", false, 35)]
         public static void InstallRobotStreamApk() => InstallByKey("robotstream");
+
+        [MenuItem("PicoTest/Install APK/Robot DS Dome - 双球模型双目", false, 36)]
+        public static void InstallRobotDsApk() => InstallByKey("robotds");
 
         /// <summary>按注册表 key 精确装机：Builds/{APK 名} 必须已构建，缺包弹窗提示先构建（YC-Ego 同款拦截）。</summary>
         private static void InstallByKey(string key)

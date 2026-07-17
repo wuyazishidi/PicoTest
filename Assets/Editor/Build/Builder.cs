@@ -50,6 +50,10 @@ namespace PicoTest.Editor.Build
                 () => "PicoTest-RobotStream.apk"),
             new SceneApk("robotds", "Assets/Experiments/Exp-RobotDsDome/Scenes/RobotDsDomeDemo.unity",
                 () => "PicoTest-RobotDsDome.apk"),
+            new SceneApk("robotleft", "Assets/Experiments/Exp-RobotStreamLeftPreview/Scenes/RobotStreamLeftPreviewDemo.unity",
+                () => "PicoTest-RobotStreamLeftPreview.apk"),
+            new SceneApk("robotstereo", "Assets/Experiments/Exp-RobotStreamStereoPreview/Scenes/RobotStreamStereoPreviewDemo.unity",
+                () => "PicoTest-RobotStreamStereoPreview.apk"),
         };
 
         // ───────────────────────── Build 菜单（每场景一项） ─────────────────────────
@@ -78,6 +82,12 @@ namespace PicoTest.Editor.Build
 
         [MenuItem("PicoTest/Build APK/Robot DS Dome - 双球模型双目", false, 16)]
         public static void BuildRobotDsApk() => BuildByKey("robotds");
+
+        [MenuItem("PicoTest/Build APK/Robot Stream Left Preview - HTTP WebRTC 左目预览", false, 17)]
+        public static void BuildRobotStreamLeftPreviewApk() => BuildByKey("robotleft");
+
+        [MenuItem("PicoTest/Build APK/Robot Stream Stereo Preview - HTTP WebRTC 双目预览", false, 18)]
+        public static void BuildRobotStreamStereoPreviewApk() => BuildByKey("robotstereo");
 
         // ───────────────────────── 构建核心 ─────────────────────────
 
@@ -269,6 +279,12 @@ namespace PicoTest.Editor.Build
 
         [MenuItem("PicoTest/Install APK/Robot DS Dome - 双球模型双目", false, 36)]
         public static void InstallRobotDsApk() => InstallByKey("robotds");
+
+        [MenuItem("PicoTest/Install APK/Robot Stream Left Preview - HTTP WebRTC 左目预览", false, 37)]
+        public static void InstallRobotStreamLeftPreviewApk() => InstallByKey("robotleft");
+
+        [MenuItem("PicoTest/Install APK/Robot Stream Stereo Preview - HTTP WebRTC 双目预览", false, 38)]
+        public static void InstallRobotStreamStereoPreviewApk() => InstallByKey("robotstereo");
 
         /// <summary>按注册表 key 精确装机：Builds/{APK 名} 必须已构建，缺包弹窗提示先构建（YC-Ego 同款拦截）。</summary>
         private static void InstallByKey(string key)

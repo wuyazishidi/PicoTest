@@ -1,6 +1,7 @@
 // Assets/Tests/EditMode/Capture/CaptureSessionTests.cs
 using System;
 using System.IO;
+using System.Threading;
 using NUnit.Framework;
 using PicoTest.Core.Capture;
 using PicoTest.Core.Recording;
@@ -39,9 +40,21 @@ namespace PicoTest.Tests.EditMode.Capture
             Assert.IsFalse(session.GetSnapshot().IsRecording);
             session.Start();
             session.Tick(100_000_000L);
-            var snap = session.GetSnapshot();
-            Assert.IsTrue(snap.IsRecording);
-            Assert.Greater(snap.Streams[0].FrameCount, 0);
+            Assert.IsTrue(session.GetSnapshot().IsRecording);
+
+            // FrameCount 由 SessionRecorder 的写线程异步递增（Tick 只是把帧同步入队，落盘在另一个
+            // 线程）；断言瞬时值是竞态（写线程还没来得及消费第一帧就检查会误判失败）。轮询到写线程
+            // 追上，而不是假设它已经追上。
+            long frameCount = 0;
+            var deadline = DateTime.UtcNow.AddSeconds(2);
+            while (DateTime.UtcNow < deadline)
+            {
+                frameCount = session.GetSnapshot().Streams[0].FrameCount;
+                if (frameCount > 0) break;
+                Thread.Sleep(5);
+            }
+            Assert.Greater(frameCount, 0, "写线程 2s 内应至少处理 1 帧");
+
             session.Stop();
             Assert.IsFalse(session.GetSnapshot().IsRecording);
         }

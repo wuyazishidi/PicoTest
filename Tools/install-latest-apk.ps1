@@ -18,11 +18,15 @@ param(
 $ErrorActionPreference = "Stop"
 $root = Split-Path $PSScriptRoot -Parent
 
-# 1) 定位 adb：PATH 优先，回退到 Unity 自带
+# 1) 定位 adb：PATH 优先，回退到 Unity 自带，再回退到独立安装的 adb 工具
+#    本机 Unity 2022.3.16f1 装的 Android 模块不含 platform-tools（路径不存在），
+#    实际可用的 adb 在 D:\Company\adb_tool\adb\adb.exe。
 $adb = "adb"
 if (-not (Get-Command adb -ErrorAction SilentlyContinue)) {
     $unityAdb = "D:\Unity\UnityEditor\Unity 2022.3.16f1\Editor\Data\PlaybackEngines\AndroidPlayer\SDK\platform-tools\adb.exe"
+    $standaloneAdb = "D:\Company\adb_tool\adb\adb.exe"
     if (Test-Path $unityAdb) { $adb = $unityAdb }
+    elseif (Test-Path $standaloneAdb) { $adb = $standaloneAdb }
     else { Write-Host "FAILED: adb not found (install Unity Android module or add adb to PATH)" -ForegroundColor Red; exit 1 }
 }
 

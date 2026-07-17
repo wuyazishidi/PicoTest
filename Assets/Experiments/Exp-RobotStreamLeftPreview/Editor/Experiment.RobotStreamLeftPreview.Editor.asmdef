@@ -1,0 +1,22 @@
+{
+    "name": "Experiment.RobotStreamLeftPreview.Editor",
+    "rootNamespace": "PicoTest.Experiments.RobotStreamLeftPreview.Editor",
+    "references": [
+        "Experiment.RobotStreamLeftPreview",
+        "Experiment.WebRTC",
+        "Experiment.RobotDsDome",
+        "Main",
+        "Main.Core"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

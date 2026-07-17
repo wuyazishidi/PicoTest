@@ -1,0 +1,22 @@
+{
+    "name": "Experiment.RobotStreamStereoPreview.Editor",
+    "rootNamespace": "PicoTest.Experiments.RobotStreamStereoPreview.Editor",
+    "references": [
+        "Experiment.RobotStreamStereoPreview",
+        "Experiment.WebRTC",
+        "Experiment.RobotDsDome",
+        "Main",
+        "Main.Core"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
